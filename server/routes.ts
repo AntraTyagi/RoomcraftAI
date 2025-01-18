@@ -5,7 +5,7 @@ import { generateDesign } from "./lib/replicate";
 export function registerRoutes(app: Express): Server {
   app.post("/api/generate", async (req, res) => {
     try {
-      const { image, style, prompt } = req.body;
+      const { image, style, roomType, colorTheme, prompt } = req.body;
 
       if (!image || !style) {
         return res.status(400).json({
@@ -13,7 +13,7 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      const designs = await generateDesign(image, style, prompt);
+      const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
       res.json({ designs });
     } catch (error) {
       console.error("Generate error:", error);

@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "@/components/file-upload";
 import StyleSelector from "@/components/style-selector";
+import RoomPreferences from "@/components/room-preferences";
 import DesignGallery from "@/components/design-gallery";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
@@ -12,6 +13,8 @@ import { useMutation } from "@tanstack/react-query";
 export default function Generate() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [generatedDesigns, setGeneratedDesigns] = useState<string[]>([]);
   const { toast } = useToast();
@@ -24,6 +27,8 @@ export default function Generate() {
         body: JSON.stringify({
           image: uploadedImage,
           style: selectedStyle,
+          roomType: selectedRoom,
+          colorTheme: selectedTheme,
           prompt,
         }),
       });
@@ -65,6 +70,24 @@ export default function Generate() {
       return;
     }
 
+    if (!selectedRoom) {
+      toast({
+        title: "Error",
+        description: "Please select a room type",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedTheme) {
+      toast({
+        title: "Error",
+        description: "Please select a color theme",
+        variant: "destructive",
+      });
+      return;
+    }
+
     generateMutation.mutate();
   };
 
@@ -85,7 +108,17 @@ export default function Generate() {
       </div>
 
       <Card className="p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">3. Additional Details (Optional)</h2>
+        <h2 className="text-xl font-semibold mb-4">3. Room Preferences</h2>
+        <RoomPreferences
+          selectedRoom={selectedRoom}
+          selectedTheme={selectedTheme}
+          onRoomSelect={setSelectedRoom}
+          onThemeSelect={setSelectedTheme}
+        />
+      </Card>
+
+      <Card className="p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">4. Additional Details (Optional)</h2>
         <Input
           placeholder="Add specific requirements or preferences..."
           value={prompt}

@@ -3,6 +3,8 @@ const REPLICATE_API_URL = "https://api.replicate.com/v1";
 export async function generateDesign(
   image: string,
   style: string,
+  roomType?: string,
+  colorTheme?: string,
   prompt?: string
 ): Promise<string[]> {
   if (!process.env.REPLICATE_API_KEY) {
@@ -13,6 +15,19 @@ export async function generateDesign(
     // Convert base64 to a temporary URL using data URI
     const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
 
+    // Construct a detailed prompt incorporating all preferences
+    let designPrompt = `Transform this ${roomType?.toLowerCase() || 'room'} into a ${style.toLowerCase()} style interior design.`;
+
+    if (colorTheme) {
+      designPrompt += ` Use a ${colorTheme.toLowerCase()} color palette.`;
+    }
+
+    designPrompt += ` Maintain room layout and structure, but update decor, furniture, and color scheme.`;
+
+    if (prompt) {
+      designPrompt += ` Additional requirements: ${prompt}`;
+    }
+
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
@@ -22,7 +37,7 @@ export async function generateDesign(
       body: JSON.stringify({
         version: "c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316",
         input: {
-          prompt: prompt || `Transform this room into a ${style.toLowerCase()} style interior design. Maintain room layout and structure, but update decor, furniture, and color scheme.`,
+          prompt: designPrompt,
           image: imageUrl,
           num_outputs: 4,
           guidance_scale: 7.5,
