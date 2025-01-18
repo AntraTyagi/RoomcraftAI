@@ -10,6 +10,9 @@ export async function generateDesign(
   }
 
   try {
+    // Convert base64 to a temporary URL using data URI
+    const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
+
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
@@ -20,7 +23,7 @@ export async function generateDesign(
         version: "c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316",
         input: {
           prompt: prompt || `Transform this room into a ${style.toLowerCase()} style interior design. Maintain room layout and structure, but update decor, furniture, and color scheme.`,
-          image: image.split(",")[1], // Remove data URL prefix
+          image: imageUrl,
           num_outputs: 4,
           guidance_scale: 7.5,
           num_inference_steps: 50,
