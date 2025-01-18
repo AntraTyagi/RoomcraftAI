@@ -1,8 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { generateDesign } from "./lib/replicate";
+import { setupAuth } from "./auth";
 
 export function registerRoutes(app: Express): Server {
+  // Set up authentication routes
+  setupAuth(app);
+
   app.post("/api/generate", async (req, res) => {
     try {
       const { image, style, roomType, colorTheme, prompt } = req.body;
