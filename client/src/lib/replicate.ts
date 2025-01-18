@@ -12,11 +12,15 @@ export async function generateDesign(
       Authorization: `Token ${import.meta.env.VITE_REPLICATE_API_KEY}`,
     },
     body: JSON.stringify({
-      version: "YOUR_MODEL_VERSION",
+      // Using stable diffusion model for interior design
+      version: "c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316",
       input: {
-        image,
-        style,
-        prompt: prompt || `Transform this room into a ${style} style interior`,
+        prompt: prompt || `Transform this room into a ${style.toLowerCase()} style interior design. Maintain room layout and structure, but update decor, furniture, and color scheme.`,
+        image: image.split(",")[1], // Remove data URL prefix
+        num_outputs: 4,
+        guidance_scale: 7.5,
+        num_inference_steps: 50,
+        scheduler: "K_EULER_ANCESTRAL",
       },
     }),
   });
@@ -26,5 +30,31 @@ export async function generateDesign(
   }
 
   const prediction = await response.json();
-  return prediction.output;
+
+  // Poll for results since Replicate API is asynchronous
+  const getResult = async (url: string): Promise<string[]> => {
+    const result = await fetch(url, {
+      headers: {
+        Authorization: `Token ${import.meta.env.VITE_REPLICATE_API_KEY}`,
+      },
+    });
+
+    if (!result.ok) {
+      throw new Error("Failed to get prediction result");
+    }
+
+    const data = await result.json();
+
+    if (data.status === "succeeded") {
+      return data.output;
+    } else if (data.status === "failed") {
+      throw new Error(data.error || "Generation failed");
+    }
+
+    // Continue polling every 1 second
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return getResult(url);
+  };
+
+  return getResult(prediction.urls.get);
 }

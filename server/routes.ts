@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { generateDesign } from "../client/src/lib/replicate";
 
 export function registerRoutes(app: Express): Server {
   app.post("/api/generate", async (req, res) => {
@@ -12,16 +13,8 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Here you would call the Replicate API
-      // This is a mock response for now
-      const mockDesigns = [
-        "https://images.unsplash.com/photo-1600210491369-e753d80a41f3",
-        "https://images.unsplash.com/photo-1669653862523-904e92ee90b4",
-        "https://images.unsplash.com/photo-1534349762230-e0cadf78f5da",
-        "https://images.unsplash.com/photo-1523575708161-ad0fc2a9b951",
-      ];
-
-      res.json({ designs: mockDesigns });
+      const designs = await generateDesign(image, style, prompt);
+      res.json({ designs });
     } catch (error) {
       console.error("Generate error:", error);
       res.status(500).json({
