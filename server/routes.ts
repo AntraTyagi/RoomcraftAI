@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { generateDesign } from "../client/src/lib/replicate";
+import { generateDesign } from "./lib/replicate";
 
 export function registerRoutes(app: Express): Server {
   app.post("/api/generate", async (req, res) => {
