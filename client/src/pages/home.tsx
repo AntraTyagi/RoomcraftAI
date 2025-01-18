@@ -27,10 +27,10 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <header className="container mx-auto px-4 py-24 text-center">
         <h1 className="text-4xl md:text-6xl font-bold mb-6">
-          Transform Your Space with AI
+          Welcome to RoomcraftAI
         </h1>
         <p className="text-lg text-muted-foreground mb-8">
-          Upload your room, choose a style, and let AI generate stunning interior design concepts
+          Transform your space with AI-powered interior design concepts
         </p>
         <Link href="/generate">
           <Button size="lg">

@@ -47,7 +47,7 @@ export default function AuthPage() {
       }
       toast({
         title: isLogin ? "Login successful" : "Registration successful",
-        description: "Welcome to Interior AI",
+        description: "Welcome to RoomcraftAI",
       });
     } catch (error: any) {
       toast({
