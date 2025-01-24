@@ -6,13 +6,14 @@ import { useToast } from "@/hooks/use-toast";
 import FileUpload from "@/components/file-upload";
 import AreaSelector, { type Area } from "@/components/area-selector";
 import FurnitureCollection, { type FurnitureItem } from "@/components/furniture-collection";
-import FurniturePreview from "@/components/furniture-preview";
+import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
 
 export default function VirtualStaging() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
   const [selectedFurniture, setSelectedFurniture] = useState<FurnitureItem | null>(null);
+  const [stagedImage, setStagedImage] = useState<string | null>(null);
   const { toast } = useToast();
 
   const stagingMutation = useMutation({
@@ -32,6 +33,13 @@ export default function VirtualStaging() {
       }
 
       return response.json();
+    },
+    onSuccess: (data) => {
+      setStagedImage(data.originalImage); // For now, using original image
+      toast({
+        title: "Preview Updated",
+        description: "Selected areas have been marked for furniture placement",
+      });
     },
     onError: () => {
       toast({
@@ -117,19 +125,15 @@ export default function VirtualStaging() {
         </div>
 
         <div className="space-y-6">
-          {selectedFurniture && (
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">3D Preview</h2>
-              <FurniturePreview
-                position={selectedFurniture.defaultPosition}
-                rotation={selectedFurniture.defaultRotation}
-              />
-            </Card>
-          )}
-
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Room Preview</h2>
-            {uploadedImage ? (
+            {uploadedImage && stagedImage ? (
+              <ComparisonSlider
+                beforeImage={uploadedImage}
+                afterImage={stagedImage}
+                className="w-full"
+              />
+            ) : uploadedImage ? (
               <div className="relative w-full aspect-[4/3]">
                 <img
                   src={uploadedImage}
@@ -141,8 +145,8 @@ export default function VirtualStaging() {
                     key={index}
                     className="absolute bg-primary/20 border-2 border-primary"
                     style={{
-                      top: `${(area.y / area.height) * 100}%`,
-                      left: `${(area.x / area.width) * 100}%`,
+                      top: `${area.y}px`,
+                      left: `${area.x}px`,
                       width: `${area.width}px`,
                       height: `${area.height}px`,
                     }}
