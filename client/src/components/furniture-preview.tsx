@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import { OrbitControls, PerspectiveCamera, useGLTF } from "@react-three/drei";
+import { Canvas, useThree } from "@react-three/fiber";
+import { OrbitControls, PerspectiveCamera, Box } from "@react-three/drei";
 import { Card } from "@/components/ui/card";
 
 interface FurniturePreviewProps {
@@ -11,23 +11,20 @@ interface FurniturePreviewProps {
 }
 
 function Scene({ furnitureModel, position = [0, 0, 0], rotation = [0, 0, 0] }: FurniturePreviewProps) {
-  const { scene } = useGLTF(furnitureModel || "/models/default-furniture.glb");
-
-  useFrame((state) => {
-    // Add subtle rotation animation
-    state.camera.lookAt(0, 0, 0);
-  });
-
   return (
     <>
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} />
-      <primitive 
-        object={scene} 
+
+      {/* Default box geometry when no model is available */}
+      <Box 
         position={position}
         rotation={rotation}
-        scale={[1, 1, 1]}
-      />
+        args={[1, 1, 1]} // width, height, depth
+      >
+        <meshStandardMaterial color="#666" />
+      </Box>
+
       <gridHelper args={[10, 10]} />
       <OrbitControls enableZoom={true} enablePan={true} />
     </>
