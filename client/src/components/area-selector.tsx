@@ -50,10 +50,26 @@ export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps)
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
 
+    // Draw highlighted areas
     areas.forEach(area => {
+      // Draw semi-transparent highlight
+      ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+      ctx.fillRect(area.x, area.y, area.width, area.height);
+
+      // Draw border with shadow
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      ctx.shadowBlur = 4;
       ctx.strokeStyle = '#00ff00';
       ctx.lineWidth = 2;
       ctx.strokeRect(area.x, area.y, area.width, area.height);
+      ctx.shadowBlur = 0;
+
+      // Draw label
+      ctx.fillStyle = 'white';
+      ctx.font = '14px sans-serif';
+      ctx.fillRect(area.x, area.y - 20, ctx.measureText(area.label).width + 10, 20);
+      ctx.fillStyle = 'black';
+      ctx.fillText(area.label, area.x + 5, area.y - 5);
     });
   };
 
@@ -84,7 +100,17 @@ export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps)
     drawImage();
     drawAreas();
 
-    // Draw current selection
+    // Draw current selection with preview highlight
+    ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+    ctx.fillRect(
+      startPos.x,
+      startPos.y,
+      x - startPos.x,
+      y - startPos.y
+    );
+
+    // Draw border for current selection
+    ctx.setLineDash([5, 5]);
     ctx.strokeStyle = '#00ff00';
     ctx.lineWidth = 2;
     ctx.strokeRect(
@@ -93,6 +119,7 @@ export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps)
       x - startPos.x,
       y - startPos.y
     );
+    ctx.setLineDash([]);
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
@@ -119,6 +146,15 @@ export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps)
       const updatedAreas = [...areas, newArea];
       setAreas(updatedAreas);
       onAreaSelect(updatedAreas);
+
+      // Trigger immediate redraw to show the new area
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawImage();
+        drawAreas();
+      }
     }
 
     setIsDrawing(false);
@@ -154,12 +190,16 @@ export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps)
       {areas.length > 0 && (
         <div className="mt-4 space-y-2">
           {areas.map(area => (
-            <div key={area.id} className="flex items-center justify-between bg-muted p-2 rounded">
-              <span className="text-sm">{area.label}</span>
+            <div 
+              key={area.id} 
+              className="flex items-center justify-between bg-muted p-2 rounded hover:bg-muted/80 transition-colors"
+            >
+              <span className="text-sm font-medium">{area.label}</span>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => removeArea(area.id)}
+                className="text-red-500 hover:text-red-600 hover:bg-red-50"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
