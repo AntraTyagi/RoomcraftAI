@@ -7,14 +7,12 @@ import FileUpload from "@/components/file-upload";
 import AreaSelector, { type Area } from "@/components/area-selector";
 import FurnitureCollection, { type FurnitureItem } from "@/components/furniture-collection";
 import FurniturePreview from "@/components/furniture-preview";
-import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
 
 export default function VirtualStaging() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
   const [selectedFurniture, setSelectedFurniture] = useState<FurnitureItem | null>(null);
-  const [stagedImage, setStagedImage] = useState<string | null>(null);
   const { toast } = useToast();
 
   const stagingMutation = useMutation({
@@ -34,9 +32,6 @@ export default function VirtualStaging() {
       }
 
       return response.json();
-    },
-    onSuccess: (data) => {
-      setStagedImage(data.stagedImage);
     },
     onError: () => {
       toast({
@@ -122,11 +117,10 @@ export default function VirtualStaging() {
         </div>
 
         <div className="space-y-6">
-          {selectedFurniture?.model && (
+          {selectedFurniture && (
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">3D Preview</h2>
               <FurniturePreview
-                furnitureModel={selectedFurniture.model}
                 position={selectedFurniture.defaultPosition}
                 rotation={selectedFurniture.defaultRotation}
               />
@@ -135,18 +129,30 @@ export default function VirtualStaging() {
 
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Room Preview</h2>
-            {uploadedImage && stagedImage ? (
-              <ComparisonSlider
-                beforeImage={uploadedImage}
-                afterImage={stagedImage}
-                className="w-full"
-              />
-            ) : uploadedImage ? (
-              <img
-                src={uploadedImage}
-                alt="Original room"
-                className="w-full aspect-[4/3] object-cover rounded-lg"
-              />
+            {uploadedImage ? (
+              <div className="relative w-full aspect-[4/3]">
+                <img
+                  src={uploadedImage}
+                  alt="Original room"
+                  className="w-full h-full object-cover rounded-lg"
+                />
+                {selectedFurniture && selectedAreas.map((area, index) => (
+                  <div
+                    key={index}
+                    className="absolute bg-primary/20 border-2 border-primary"
+                    style={{
+                      top: `${(area.y / area.height) * 100}%`,
+                      left: `${(area.x / area.width) * 100}%`,
+                      width: `${area.width}px`,
+                      height: `${area.height}px`,
+                    }}
+                  >
+                    <div className="absolute top-2 left-2 bg-background/80 px-2 py-1 rounded text-xs">
+                      {selectedFurniture.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="w-full aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
                 <p className="text-muted-foreground">

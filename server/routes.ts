@@ -37,11 +37,13 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // TODO: Integrate with a suitable AI model for furniture replacement
-      // For now, we'll return a mock response
-      const mockStaging = image; // In a real implementation, this would be the processed image
-
-      res.json({ stagedImage: mockStaging });
+      // For now, return the original image along with the staging information
+      // The actual overlay will be handled on the client side
+      res.json({
+        originalImage: image,
+        areas,
+        furnitureId,
+      });
     } catch (error) {
       console.error("Virtual staging error:", error);
       res.status(500).json({
