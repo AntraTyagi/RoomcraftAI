@@ -28,48 +28,63 @@ export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps)
     const img = new Image();
     img.src = image;
     img.onload = () => {
-      drawImage();
-      drawAreas();
+      if (canvasRef.current && containerRef.current) {
+        // Set canvas size to match container
+        const container = containerRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = container.clientWidth;
+        canvas.height = (container.clientWidth * 3) / 4; // 4:3 aspect ratio
+        drawCanvas();
+      }
     };
   }, [image, areas]);
 
-  const drawImage = () => {
+  // Combined drawing function to ensure proper layering
+  const drawCanvas = () => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
 
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw image
     const img = new Image();
     img.src = image;
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    };
-  };
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-  const drawAreas = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-
-    // Draw highlighted areas
+    // Draw all areas
     areas.forEach(area => {
-      // Draw semi-transparent highlight
-      ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+      // Fill with semi-transparent highlight
+      ctx.fillStyle = 'rgba(76, 175, 80, 0.3)'; // Slightly more opaque green
       ctx.fillRect(area.x, area.y, area.width, area.height);
 
-      // Draw border with shadow
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-      ctx.shadowBlur = 4;
-      ctx.strokeStyle = '#00ff00';
+      // Draw outer glow effect
+      ctx.shadowColor = 'rgba(76, 175, 80, 0.5)';
+      ctx.shadowBlur = 10;
+      ctx.strokeStyle = '#4CAF50';
       ctx.lineWidth = 2;
       ctx.strokeRect(area.x, area.y, area.width, area.height);
       ctx.shadowBlur = 0;
 
-      // Draw label
-      ctx.fillStyle = 'white';
-      ctx.font = '14px sans-serif';
-      ctx.fillRect(area.x, area.y - 20, ctx.measureText(area.label).width + 10, 20);
-      ctx.fillStyle = 'black';
-      ctx.fillText(area.label, area.x + 5, area.y - 5);
+      // Draw label background
+      const labelText = area.label;
+      const labelMetrics = ctx.measureText(labelText);
+      const labelPadding = 4;
+      const labelHeight = 20;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(
+        area.x,
+        area.y - labelHeight - labelPadding,
+        labelMetrics.width + (labelPadding * 2),
+        labelHeight
+      );
+
+      // Draw label text
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(labelText, area.x + labelPadding, area.y - labelPadding - 4);
     });
   };
 
@@ -85,23 +100,21 @@ export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps)
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing || !containerRef.current) return;
+    if (!isDrawing || !containerRef.current || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Clear and redraw
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawImage();
-    drawAreas();
+    // Redraw everything
+    drawCanvas();
 
-    // Draw current selection with preview highlight
-    ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+    // Draw current selection with prominent preview
+    ctx.fillStyle = 'rgba(76, 175, 80, 0.2)';
     ctx.fillRect(
       startPos.x,
       startPos.y,
@@ -109,9 +122,10 @@ export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps)
       y - startPos.y
     );
 
-    // Draw border for current selection
+    // Animated dashed line effect
     ctx.setLineDash([5, 5]);
-    ctx.strokeStyle = '#00ff00';
+    ctx.lineDashOffset = -Date.now() / 100; // Animate the dash
+    ctx.strokeStyle = '#4CAF50';
     ctx.lineWidth = 2;
     ctx.strokeRect(
       startPos.x,
@@ -146,18 +160,10 @@ export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps)
       const updatedAreas = [...areas, newArea];
       setAreas(updatedAreas);
       onAreaSelect(updatedAreas);
-
-      // Trigger immediate redraw to show the new area
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext('2d');
-      if (canvas && ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawImage();
-        drawAreas();
-      }
     }
 
     setIsDrawing(false);
+    drawCanvas(); // Ensure final state is drawn correctly
   };
 
   const removeArea = (id: string) => {
@@ -168,19 +174,17 @@ export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps)
 
   return (
     <Card className="p-4">
-      <div className="relative" ref={containerRef}>
+      <div className="relative w-full" ref={containerRef}>
         <canvas
           ref={canvasRef}
-          width={800}
-          height={600}
-          className="border rounded cursor-crosshair"
+          className="w-full cursor-crosshair border rounded-lg"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={() => setIsDrawing(false)}
         />
         {areas.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/5 pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/5 pointer-events-none rounded-lg">
             <p className="text-sm text-muted-foreground">
               Click and drag to select areas for furniture replacement
             </p>
