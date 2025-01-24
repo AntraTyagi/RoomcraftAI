@@ -1,35 +1,27 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "@/components/file-upload";
+import AreaSelector, { type Area } from "@/components/area-selector";
+import FurnitureCollection from "@/components/furniture-collection";
 import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
 
-const ROOM_TYPES = [
-  "Living Room",
-  "Bedroom",
-  "Dining Room",
-  "Kitchen",
-  "Office",
-  "Bathroom",
-];
-
-const STYLE_OPTIONS = [
-  "Modern Minimalist",
-  "Contemporary",
-  "Traditional",
-  "Scandinavian",
-  "Industrial",
-  "Luxury",
-];
+interface FurnitureItem {
+  id: string;
+  name: string;
+  category: string;
+  image: string;
+  description: string;
+}
 
 export default function VirtualStaging() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
+  const [selectedFurniture, setSelectedFurniture] = useState<FurnitureItem | null>(null);
   const [stagedImage, setStagedImage] = useState<string | null>(null);
-  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
-  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const { toast } = useToast();
 
   const stagingMutation = useMutation({
@@ -39,8 +31,8 @@ export default function VirtualStaging() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image: uploadedImage,
-          roomType: selectedRoom,
-          style: selectedStyle,
+          areas: selectedAreas,
+          furnitureId: selectedFurniture?.id,
         }),
       });
 
@@ -73,10 +65,19 @@ export default function VirtualStaging() {
       return;
     }
 
-    if (!selectedRoom || !selectedStyle) {
+    if (selectedAreas.length === 0) {
       toast({
         title: "Error",
-        description: "Please select both room type and style",
+        description: "Please select at least one area to replace",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedFurniture) {
+      toast({
+        title: "Error",
+        description: "Please select a furniture item",
         variant: "destructive",
       });
       return;
@@ -96,37 +97,25 @@ export default function VirtualStaging() {
             <FileUpload onUpload={setUploadedImage} />
           </Card>
 
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">2. Room Type</h2>
-            <div className="grid grid-cols-2 gap-2">
-              {ROOM_TYPES.map((room) => (
-                <Button
-                  key={room}
-                  variant={selectedRoom === room ? "default" : "outline"}
-                  onClick={() => setSelectedRoom(room)}
-                  className="justify-start"
-                >
-                  {room}
-                </Button>
-              ))}
-            </div>
-          </Card>
+          {uploadedImage && (
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">2. Select Areas to Replace</h2>
+              <AreaSelector
+                image={uploadedImage}
+                onAreaSelect={setSelectedAreas}
+              />
+            </Card>
+          )}
 
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">3. Style Preference</h2>
-            <div className="grid grid-cols-2 gap-2">
-              {STYLE_OPTIONS.map((style) => (
-                <Button
-                  key={style}
-                  variant={selectedStyle === style ? "default" : "outline"}
-                  onClick={() => setSelectedStyle(style)}
-                  className="justify-start"
-                >
-                  {style}
-                </Button>
-              ))}
-            </div>
-          </Card>
+          {selectedAreas.length > 0 && (
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">3. Choose Furniture</h2>
+              <FurnitureCollection
+                onSelect={setSelectedFurniture}
+                selectedItemId={selectedFurniture?.id}
+              />
+            </Card>
+          )}
 
           <Button
             onClick={handleGenerate}
