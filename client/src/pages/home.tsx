@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { PlusCircle, Image, Palette } from "lucide-react";
-import NavBar from "@/components/nav-bar";
 import { Sparkles } from "lucide-react";
 
 const STYLE_PREVIEWS = [
@@ -27,8 +26,6 @@ const STYLE_PREVIEWS = [
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
-      <NavBar />
-
       {/* Hero Banner */}
       <header className="relative">
         <div className="absolute inset-0 bg-gradient-to-r from-background to-background/20 z-10" />
@@ -81,15 +78,17 @@ export default function Home() {
                 Perfect for real estate. Stage empty rooms with furniture and decor
                 to help potential buyers visualize the space.
               </p>
-              <Button className="w-full" variant="secondary" disabled>
-                Coming Soon
-              </Button>
+              <Link href="/virtual-staging">
+                <Button className="w-full" variant="secondary">
+                  Start Staging
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
       </section>
 
-      {/* Design Styles Section (from original code) */}
+      {/* Design Styles Section */}
       <section className="container mx-auto px-4 py-16">
         <h2 className="text-3xl font-bold text-center mb-12">Design Styles</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

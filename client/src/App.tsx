@@ -6,15 +6,18 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Generate from "@/pages/generate";
 import AuthPage from "@/pages/auth-page";
+import Layout from "@/components/layout";
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/generate" component={Generate} />
-      <Route path="/auth" component={AuthPage} />
-      <Route component={NotFound} />
-    </Switch>
+    <Layout>
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/generate" component={Generate} />
+        <Route path="/auth" component={AuthPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </Layout>
   );
 }
 
