@@ -35,11 +35,7 @@ export default function VirtualStaging() {
       return response.json();
     },
     onSuccess: (data) => {
-      setStagedImage(data.originalImage); // For now, using original image
-      toast({
-        title: "Preview Updated",
-        description: "Selected areas have been marked for furniture placement",
-      });
+      setStagedImage(data.originalImage);
     },
     onError: () => {
       toast({
