@@ -5,17 +5,10 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "@/components/file-upload";
 import AreaSelector, { type Area } from "@/components/area-selector";
-import FurnitureCollection from "@/components/furniture-collection";
+import FurnitureCollection, { type FurnitureItem } from "@/components/furniture-collection";
+import FurniturePreview from "@/components/furniture-preview";
 import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
-
-interface FurnitureItem {
-  id: string;
-  name: string;
-  category: string;
-  image: string;
-  description: string;
-}
 
 export default function VirtualStaging() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -40,11 +33,10 @@ export default function VirtualStaging() {
         throw new Error("Failed to generate staged design");
       }
 
-      const data = await response.json();
-      return data.stagedImage;
+      return response.json();
     },
-    onSuccess: (stagedImage) => {
-      setStagedImage(stagedImage);
+    onSuccess: (data) => {
+      setStagedImage(data.stagedImage);
     },
     onError: () => {
       toast({
@@ -130,8 +122,19 @@ export default function VirtualStaging() {
         </div>
 
         <div className="space-y-6">
+          {selectedFurniture?.model && (
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">3D Preview</h2>
+              <FurniturePreview
+                furnitureModel={selectedFurniture.model}
+                position={selectedFurniture.defaultPosition}
+                rotation={selectedFurniture.defaultRotation}
+              />
+            </Card>
+          )}
+
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Preview</h2>
+            <h2 className="text-xl font-semibold mb-4">Room Preview</h2>
             {uploadedImage && stagedImage ? (
               <ComparisonSlider
                 beforeImage={uploadedImage}

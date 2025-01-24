@@ -8,6 +8,9 @@ interface FurnitureItem {
   category: string;
   image: string;
   description: string;
+  model?: string; // 3D model URL
+  defaultPosition?: [number, number, number];
+  defaultRotation?: [number, number, number];
 }
 
 interface FurnitureCollectionProps {
@@ -15,7 +18,7 @@ interface FurnitureCollectionProps {
   selectedItemId?: string;
 }
 
-// Sample furniture data - In a real app, this would come from an API
+// Sample furniture data with 3D models
 const FURNITURE_ITEMS: FurnitureItem[] = [
   {
     id: "1",
@@ -23,6 +26,9 @@ const FURNITURE_ITEMS: FurnitureItem[] = [
     category: "Seating",
     image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc",
     description: "Contemporary minimalist sofa in gray",
+    model: "/models/sofa.glb",
+    defaultPosition: [0, 0, 0],
+    defaultRotation: [0, 0, 0],
   },
   {
     id: "2",
@@ -30,6 +36,9 @@ const FURNITURE_ITEMS: FurnitureItem[] = [
     category: "Seating",
     image: "https://images.unsplash.com/photo-1506439773649-6e31c1b75d1d",
     description: "Mid-century modern accent chair",
+    model: "/models/chair.glb",
+    defaultPosition: [0, 0, 0],
+    defaultRotation: [0, 0, 0],
   },
   {
     id: "3",
@@ -37,8 +46,10 @@ const FURNITURE_ITEMS: FurnitureItem[] = [
     category: "Tables",
     image: "https://images.unsplash.com/photo-1532372320978-9977d2ec5f30",
     description: "Glass and wood coffee table",
+    model: "/models/table.glb",
+    defaultPosition: [0, 0, 0],
+    defaultRotation: [0, 0, 0],
   },
-  // Add more furniture items as needed
 ];
 
 export default function FurnitureCollection({ onSelect, selectedItemId }: FurnitureCollectionProps) {
@@ -55,11 +66,18 @@ export default function FurnitureCollection({ onSelect, selectedItemId }: Furnit
               }`}
               onClick={() => onSelect(item)}
             >
-              <img
-                src={item.image}
-                alt={item.name}
-                className="w-full h-32 object-cover"
-              />
+              <div className="relative">
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="w-full h-32 object-cover"
+                />
+                {item.model && (
+                  <div className="absolute top-2 right-2 bg-primary/10 px-2 py-1 rounded-full">
+                    <span className="text-xs font-medium">3D Available</span>
+                  </div>
+                )}
+              </div>
               <div className="p-3">
                 <h4 className="font-medium">{item.name}</h4>
                 <p className="text-sm text-muted-foreground">{item.description}</p>
@@ -71,3 +89,5 @@ export default function FurnitureCollection({ onSelect, selectedItemId }: Furnit
     </Card>
   );
 }
+
+export type { FurnitureItem };
