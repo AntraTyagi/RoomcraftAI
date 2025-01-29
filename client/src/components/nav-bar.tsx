@@ -9,7 +9,7 @@ export default function NavBar() {
     <nav className="border-b">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/">
-          <a className="text-2xl font-bold">RoomcraftAI</a>
+          <span className="text-2xl font-bold cursor-pointer">RoomcraftAI</span>
         </Link>
         <div className="flex items-center gap-4">
           {user ? (
@@ -23,7 +23,7 @@ export default function NavBar() {
             </>
           ) : (
             <Link href="/auth">
-              <Button variant="ghost">Login</Button>
+              <Button variant="ghost" className="cursor-pointer">Login</Button>
             </Link>
           )}
         </div>
