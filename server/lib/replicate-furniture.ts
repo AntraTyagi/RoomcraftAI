@@ -45,7 +45,7 @@ export async function generateFurnitureImage(
 
   try {
     const prompt = FURNITURE_PROMPTS[type][index];
-    
+
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
@@ -53,12 +53,14 @@ export async function generateFurnitureImage(
         Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
       },
       body: JSON.stringify({
-        version: "651d2cc5442c37c17bcadf3470466b4e54003bfb32f274bdd6a2da0cbe98bed3",
+        version: "8beff3369e81422112d93b89ca01426147de542cd4684c244b673b105188fe5f", // SDXL-Lightning model version
         input: {
           prompt,
-          num_outputs: 1,
-          scheduler: "K_EULER",
-          steps: 4,
+          negative_prompt: "low quality, blurry, distorted",
+          num_inference_steps: 4, // Lightning model uses 4 steps
+          guidance_scale: 7.5,
+          width: 1024,
+          height: 1024,
         },
       }),
     });
