@@ -9,12 +9,68 @@ import FurnitureCollection, { type FurnitureItem } from "@/components/furniture-
 import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
 
+interface DetectedObject {
+  label: string;
+  confidence: number;
+  box: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  };
+}
+
 export default function VirtualStaging() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
   const [selectedFurniture, setSelectedFurniture] = useState<FurnitureItem | null>(null);
   const [stagedImage, setStagedImage] = useState<string | null>(null);
+  const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
   const { toast } = useToast();
+
+  const detectObjectsMutation = useMutation({
+    mutationFn: async (image: string) => {
+      const response = await fetch("/api/detect-objects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to detect objects");
+      }
+
+      const data = await response.json();
+      return data.objects;
+    },
+    onSuccess: (objects) => {
+      setDetectedObjects(objects);
+      // Filter for furniture items only
+      const furnitureObjects = objects.filter(obj => 
+        ['chair', 'couch', 'sofa', 'bed', 'table', 'desk', 'cabinet', 'dresser']
+          .includes(obj.label.toLowerCase())
+      );
+
+      // Convert detected objects to areas
+      const areas = furnitureObjects.map((obj, index) => ({
+        id: `detected-${index}`,
+        x: obj.box.x1,
+        y: obj.box.y1,
+        width: obj.box.x2 - obj.box.x1,
+        height: obj.box.y2 - obj.box.y1,
+        label: obj.label
+      }));
+
+      setSelectedAreas(areas);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to detect objects in the image. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const stagingMutation = useMutation({
     mutationFn: async () => {
@@ -45,6 +101,11 @@ export default function VirtualStaging() {
       });
     },
   });
+
+  const handleImageUpload = (image: string) => {
+    setUploadedImage(image);
+    detectObjectsMutation.mutate(image);
+  };
 
   const handleGenerate = () => {
     if (!uploadedImage) {
@@ -85,7 +146,13 @@ export default function VirtualStaging() {
         <div className="space-y-8">
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">1. Upload Room Photo</h2>
-            <FileUpload onUpload={setUploadedImage} />
+            <FileUpload onUpload={handleImageUpload} />
+            {detectObjectsMutation.isPending && (
+              <div className="mt-4 flex items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Detecting furniture...
+              </div>
+            )}
           </Card>
 
           {uploadedImage && (
@@ -95,6 +162,13 @@ export default function VirtualStaging() {
                 image={uploadedImage}
                 onAreaSelect={setSelectedAreas}
               />
+              {detectedObjects.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Detected furniture items: {detectedObjects.map(obj => obj.label).join(', ')}
+                  </p>
+                </div>
+              )}
             </Card>
           )}
 

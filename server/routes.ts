@@ -2,10 +2,31 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { generateDesign } from "./lib/replicate";
 import { setupAuth } from "./auth";
+import { detectObjectsInImage } from "./lib/replicate-detectors";
 
 export function registerRoutes(app: Express): Server {
   // Set up authentication routes
   setupAuth(app);
+
+  app.post("/api/detect-objects", async (req, res) => {
+    try {
+      const { image } = req.body;
+
+      if (!image) {
+        return res.status(400).json({
+          message: "Image is required",
+        });
+      }
+
+      const detectionResult = await detectObjectsInImage(image);
+      res.json(detectionResult);
+    } catch (error) {
+      console.error("Object detection error:", error);
+      res.status(500).json({
+        message: "Failed to detect objects in image",
+      });
+    }
+  });
 
   app.post("/api/generate", async (req, res) => {
     try {
