@@ -6,32 +6,32 @@ type FurnitureType = "couch" | "bed" | "work_table" | "center_table";
 
 const FURNITURE_PROMPTS: Record<FurnitureType, string[]> = {
   couch: [
-    "modern minimalist gray sofa in a clean contemporary setting, ultra realistic product photography",
-    "luxurious leather brown chesterfield sofa with tufted details, studio lighting",
-    "scandinavian style beige fabric sofa with wooden legs, minimalist design",
-    "mid-century modern velvet green sofa with tapered legs, professional furniture photography",
-    "contemporary sectional white sofa with clean lines, showroom setting"
+    "modern minimalist sofa, product photography",
+    "classic leather couch, studio lighting",
+    "contemporary fabric sofa, clean lines",
+    "scandinavian style sofa, natural light",
+    "mid-century modern sofa, professional photo"
   ],
   bed: [
-    "modern platform bed with gray upholstered headboard, minimalist bedroom setting",
-    "traditional wooden sleigh bed in dark walnut finish, luxury bedroom",
-    "contemporary queen bed with floating design and LED lighting",
-    "rustic wooden bed frame with natural finish, farmhouse style",
-    "modern canopy bed with black metal frame, urban bedroom setting"
+    "modern platform bed, minimal design",
+    "classic wooden bed frame, bedroom setting",
+    "contemporary queen bed, clean design",
+    "rustic wood bed frame, natural finish",
+    "modern bed with headboard, professional photo"
   ],
   work_table: [
-    "modern white standing desk with ergonomic design, office setting",
-    "industrial style wooden desk with metal frame, workspace photography",
-    "minimalist oak writing desk with cable management, home office",
-    "contemporary glass top desk with chrome legs, professional setting",
-    "rustic reclaimed wood desk with steel accents, studio lighting"
+    "modern desk, minimal design",
+    "wooden writing desk, office setting",
+    "contemporary desk, clean lines",
+    "industrial style desk, workspace",
+    "minimalist work table, studio photo"
   ],
   center_table: [
-    "modern glass coffee table with geometric metal base, living room setting",
-    "rustic wooden coffee table with hairpin legs, contemporary space",
-    "marble top coffee table with gold metal frame, luxury interior",
-    "minimalist round coffee table in white, scandinavian design",
-    "industrial style concrete coffee table, modern living space"
+    "modern coffee table, minimal design",
+    "wooden coffee table, living room",
+    "glass coffee table, contemporary",
+    "round coffee table, scandinavian style",
+    "industrial coffee table, studio photo"
   ]
 };
 
@@ -39,36 +39,39 @@ export async function generateFurnitureImage(
   type: FurnitureType,
   index: number
 ): Promise<string> {
-  if (!process.env.REPLICATE_API_KEY) {
+  const token = process.env.REPLICATE_API_KEY?.trim();
+  if (!token) {
     throw new Error("Replicate API key is missing");
   }
 
   try {
     const prompt = FURNITURE_PROMPTS[type][index];
+    console.log("Starting furniture generation with type:", type, "index:", index);
+    console.log("Using prompt:", prompt);
 
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+        Authorization: `Token ${token}`,
       },
       body: JSON.stringify({
-        version: "8beff3369e81422112d93b89ca01426147de542cd4684c244b673b105188fe5f", // SDXL-Lightning model version
+        version: "8beff3369e81422112d93b89ca01426147de542cd4684c244b673b105188fe5f",
         input: {
           prompt,
-          negative_prompt: "low quality, blurry, distorted",
-          num_inference_steps: 4, // Lightning model uses 4 steps
+          negative_prompt: "low quality, blurry, distorted, deformed",
+          num_inference_steps: 4,
           guidance_scale: 7.5,
-          width: 1024,
-          height: 1024,
+          width: 768,
+          height: 768,
         },
       }),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error("Furniture generation error:", error);
-      throw new Error(`Failed to generate furniture image: ${error}`);
+      console.error("Replicate API error response:", error);
+      throw new Error(`Failed to start prediction: ${error}`);
     }
 
     const prediction = await response.json();
@@ -76,22 +79,28 @@ export async function generateFurnitureImage(
 
     // Poll for results
     const getResult = async (url: string): Promise<string> => {
+      console.log("Polling for results at:", url);
+
       const result = await fetch(url, {
         headers: {
-          Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+          Authorization: `Token ${token}`,
         },
       });
 
       if (!result.ok) {
-        throw new Error("Failed to get prediction result");
+        const error = await result.text();
+        console.error("Prediction status error:", error);
+        throw new Error(`Failed to get prediction result: ${error}`);
       }
 
-      const data = await result.json();
+      const data = await result.json() as any;
       console.log("Generation status:", data.status);
 
       if (data.status === "succeeded") {
-        return data.output[0]; // Returns the image URL
+        console.log("Generation completed successfully");
+        return data.output[0] as string;
       } else if (data.status === "failed") {
+        console.error("Generation failed:", data.error);
         throw new Error(data.error || "Generation failed");
       }
 
@@ -100,9 +109,9 @@ export async function generateFurnitureImage(
       return getResult(url);
     };
 
-    return getResult(prediction.urls.get);
+    return getResult((prediction as any).urls.get);
   } catch (error) {
-    console.error("Generate furniture error:", error);
+    console.error("Furniture generation error:", error);
     throw error;
   }
 }
