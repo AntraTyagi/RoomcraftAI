@@ -14,7 +14,8 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
     };
   }>;
 }> {
-  if (!process.env.REPLICATE_API_TOKEN) {
+  const token = process.env.REPLICATE_API_TOKEN?.trim();
+  if (!token) {
     throw new Error("Replicate API token is missing");
   }
 
@@ -24,51 +25,55 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
       ? base64Image 
       : `data:image/jpeg;base64,${base64Image}`;
 
+    console.log("Initiating Replicate API request for object detection");
+    console.log("API URL:", REPLICATE_API_URL);
+    console.log("Token present:", !!token);
+
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
+        "Authorization": `Token ${token}`,
         "Content-Type": "application/json",
-        Authorization: `Token ${process.env.REPLICATE_API_TOKEN}`,
       },
       body: JSON.stringify({
-        // Using YOLOv8x model for improved object detection
         version: "8c869771f9da8bb40173c68d14534c498d86b63219aa82c48d09677da0ec31d8",
         input: {
           image: imageUrl,
-          confidence: 0.35, // Lower threshold to detect more objects
+          confidence: 0.35,
           task_type: "detect",
         },
       }),
     });
 
+    const responseData = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Replicate API error:", errorData);
-      throw new Error(`Replicate API error: ${JSON.stringify(errorData)}`);
+      console.error("Replicate API error response:", responseData);
+      throw new Error(`Replicate API error: ${JSON.stringify(responseData)}`);
     }
 
-    const prediction: any = await response.json();
-    console.log("Object detection prediction created:", prediction.id);
+    console.log("Successfully created prediction:", responseData.id);
 
     // Poll for results
     const getResult = async (url: string): Promise<any> => {
+      console.log("Polling for results at:", url);
+
       const result = await fetch(url, {
         headers: {
-          Authorization: `Token ${process.env.REPLICATE_API_TOKEN}`,
+          "Authorization": `Token ${token}`,
         },
       });
 
+      const data = await result.json();
+
       if (!result.ok) {
-        const errorData = await result.json();
-        console.error("Prediction status error:", errorData);
-        throw new Error(`Failed to get prediction result: ${JSON.stringify(errorData)}`);
+        console.error("Prediction status error:", data);
+        throw new Error(`Failed to get prediction result: ${JSON.stringify(data)}`);
       }
 
-      const data: any = await result.json();
       console.log("Prediction status:", data.status);
 
       if (data.status === "succeeded") {
-        // Transform the YOLO output to our desired format
         return {
           objects: data.output.map((obj: any) => ({
             label: obj.label,
@@ -90,7 +95,7 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
       return getResult(url);
     };
 
-    return getResult(prediction.urls.get);
+    return getResult(responseData.urls.get);
   } catch (error) {
     console.error("Object detection error:", error);
     throw error;
