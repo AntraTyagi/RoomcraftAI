@@ -1,6 +1,10 @@
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 interface FurnitureItem {
   id: string;
@@ -17,69 +21,97 @@ interface FurnitureCollectionProps {
   selectedItemId?: string;
 }
 
-// Sample furniture data
-const FURNITURE_ITEMS: FurnitureItem[] = [
-  {
-    id: "1",
-    name: "Modern Sofa",
-    category: "Seating",
-    image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc",
-    description: "Contemporary minimalist sofa in gray",
-    defaultPosition: [0, 0, 0],
-    defaultRotation: [0, Math.PI / 4, 0],
-  },
-  {
-    id: "2",
-    name: "Accent Chair",
-    category: "Seating",
-    image: "https://images.unsplash.com/photo-1506439773649-6e31c1b75d1d",
-    description: "Mid-century modern accent chair",
-    defaultPosition: [0, 0, 0],
-    defaultRotation: [0, -Math.PI / 4, 0],
-  },
-  {
-    id: "3",
-    name: "Coffee Table",
-    category: "Tables",
-    image: "https://images.unsplash.com/photo-1532372320978-9977d2ec5f30",
-    description: "Glass and wood coffee table",
-    defaultPosition: [0, -0.5, 0],
-    defaultRotation: [0, 0, 0],
-  },
+async function generateFurnitureImage(type: string, index: number): Promise<string> {
+  const response = await fetch("/api/generate-furniture", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, index }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to generate furniture image");
+  }
+
+  const data = await response.json();
+  return data.imageUrl;
+}
+
+const FURNITURE_CATEGORIES = [
+  { id: "couch", label: "Couches" },
+  { id: "bed", label: "Beds" },
+  { id: "work_table", label: "Work Tables" },
+  { id: "center_table", label: "Center Tables" },
 ];
 
 export default function FurnitureCollection({ onSelect, selectedItemId }: FurnitureCollectionProps) {
+  const [selectedCategory, setSelectedCategory] = useState("couch");
+  const [generatedItems, setGeneratedItems] = useState<FurnitureItem[]>([]);
+
+  useEffect(() => {
+    // Generate initial items for the first category
+    Promise.all(
+      Array(5).fill(null).map(async (_, index) => {
+        const imageUrl = await generateFurnitureImage(selectedCategory, index);
+        return {
+          id: `${selectedCategory}-${index}`,
+          name: `${FURNITURE_CATEGORIES.find(cat => cat.id === selectedCategory)?.label} ${index + 1}`,
+          category: selectedCategory,
+          image: imageUrl,
+          description: `${selectedCategory} style furniture piece`,
+        };
+      })
+    ).then(setGeneratedItems);
+  }, [selectedCategory]);
+
   return (
     <Card className="p-4">
       <h3 className="text-lg font-semibold mb-4">Furniture Collection</h3>
-      <ScrollArea className="h-[400px] pr-4">
-        <div className="grid grid-cols-2 gap-4">
-          {FURNITURE_ITEMS.map((item) => (
-            <Card
-              key={item.id}
-              className={`cursor-pointer overflow-hidden transition-all hover:ring-2 hover:ring-primary ${
-                selectedItemId === item.id ? "ring-2 ring-primary" : ""
-              }`}
-              onClick={() => onSelect(item)}
-            >
-              <div className="relative">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-32 object-cover"
-                />
-                <div className="absolute top-2 right-2 bg-primary/10 px-2 py-1 rounded-full">
-                  <span className="text-xs font-medium">3D Preview</span>
-                </div>
-              </div>
-              <div className="p-3">
-                <h4 className="font-medium">{item.name}</h4>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
-              </div>
-            </Card>
+
+      <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
+        <TabsList className="mb-4">
+          {FURNITURE_CATEGORIES.map(category => (
+            <TabsTrigger key={category.id} value={category.id}>
+              {category.label}
+            </TabsTrigger>
           ))}
-        </div>
-      </ScrollArea>
+        </TabsList>
+
+        {FURNITURE_CATEGORIES.map(category => (
+          <TabsContent key={category.id} value={category.id}>
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="grid grid-cols-2 gap-4">
+                {generatedItems.length === 0 ? (
+                  <div className="col-span-2 flex items-center justify-center h-40">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : (
+                  generatedItems.map((item) => (
+                    <Card
+                      key={item.id}
+                      className={`cursor-pointer overflow-hidden transition-all hover:ring-2 hover:ring-primary ${
+                        selectedItemId === item.id ? "ring-2 ring-primary" : ""
+                      }`}
+                      onClick={() => onSelect(item)}
+                    >
+                      <div className="relative">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-32 object-cover"
+                        />
+                      </div>
+                      <div className="p-3">
+                        <h4 className="font-medium">{item.name}</h4>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      </div>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        ))}
+      </Tabs>
     </Card>
   );
 }

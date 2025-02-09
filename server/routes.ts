@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { generateDesign } from "./lib/replicate";
 import { setupAuth } from "./auth";
 import { detectObjectsInImage } from "./lib/replicate-detectors";
+import { generateFurnitureImage } from "./lib/replicate-furniture";
 
 export function registerRoutes(app: Express): Server {
   // Set up authentication routes
@@ -74,6 +75,26 @@ export function registerRoutes(app: Express): Server {
       console.error("Virtual staging error:", error);
       res.status(500).json({
         message: "Failed to generate staged design",
+      });
+    }
+  });
+
+  app.post("/api/generate-furniture", async (req, res) => {
+    try {
+      const { type, index } = req.body;
+
+      if (!type || typeof index !== "number") {
+        return res.status(400).json({
+          message: "Furniture type and index are required",
+        });
+      }
+
+      const imageUrl = await generateFurnitureImage(type, index);
+      res.json({ imageUrl });
+    } catch (error) {
+      console.error("Furniture generation error:", error);
+      res.status(500).json({
+        message: "Failed to generate furniture image",
       });
     }
   });
