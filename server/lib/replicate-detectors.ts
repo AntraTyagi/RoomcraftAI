@@ -14,9 +14,9 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
     };
   }>;
 }> {
-  const token = process.env.REPLICATE_API_TOKEN?.trim();
+  const token = process.env.REPLICATE_API_KEY?.trim();
   if (!token) {
-    throw new Error("Replicate API token is missing");
+    throw new Error("Replicate API key is missing");
   }
 
   try {
@@ -31,8 +31,8 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
-        "Authorization": `Token ${token}`,
         "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
       },
       body: JSON.stringify({
         version: "ae0d70cebf6afb2ac4f5e4375eb599c178238b312c8325a9a114827ba869e3e9",
@@ -59,7 +59,7 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
 
       const result = await fetch(url, {
         headers: {
-          "Authorization": `Token ${token}`,
+          Authorization: `Token ${token}`,
         },
       });
 

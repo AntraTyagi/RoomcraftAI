@@ -8,9 +8,9 @@ export function registerRoutes(app: Express): Server {
   // Set up authentication routes
   setupAuth(app);
 
-  // Ensure REPLICATE_API_TOKEN is set
-  if (!process.env.REPLICATE_API_TOKEN) {
-    console.error("Warning: REPLICATE_API_TOKEN environment variable is not set");
+  // Ensure REPLICATE_API_KEY is set
+  if (!process.env.REPLICATE_API_KEY) {
+    console.error("Warning: REPLICATE_API_KEY environment variable is not set");
   }
 
   app.post("/api/detect-objects", async (req, res) => {
