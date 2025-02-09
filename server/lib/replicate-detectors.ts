@@ -25,9 +25,8 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
       ? base64Image 
       : `data:image/jpeg;base64,${base64Image}`;
 
-    console.log("Initiating Replicate API request for object detection");
-    console.log("API URL:", REPLICATE_API_URL);
-    console.log("Token present:", !!token);
+    console.log("Initiating YOLOX object detection request");
+    console.log("Model: daanelson/yolox");
 
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
@@ -36,20 +35,20 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        version: "8c869771f9da8bb40173c68d14534c498d86b63219aa82c48d09677da0ec31d8",
+        version: "ae0d70cebf6afb2ac4f5e4375eb599c178238b312c8325a9a114827ba869e3e9",
         input: {
           image: imageUrl,
-          confidence: 0.35,
-          task_type: "detect",
+          threshold: 0.3, // Lower threshold for better detection
         },
       }),
     });
 
     const responseData = await response.json();
+    console.log("API Response status:", response.status);
 
     if (!response.ok) {
-      console.error("Replicate API error response:", responseData);
-      throw new Error(`Replicate API error: ${JSON.stringify(responseData)}`);
+      console.error("YOLOX API error response:", responseData);
+      throw new Error(`YOLOX API error: ${JSON.stringify(responseData)}`);
     }
 
     console.log("Successfully created prediction:", responseData.id);
@@ -74,18 +73,20 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
       console.log("Prediction status:", data.status);
 
       if (data.status === "succeeded") {
-        return {
-          objects: data.output.map((obj: any) => ({
-            label: obj.label,
-            confidence: obj.confidence,
-            box: {
-              x1: obj.box.x1,
-              y1: obj.box.y1,
-              x2: obj.box.x2,
-              y2: obj.box.y2,
-            },
-          })),
-        };
+        // Parse YOLOX output format
+        const objects = data.output.map((detection: any) => ({
+          label: detection.label || "unknown",
+          confidence: detection.confidence || 0,
+          box: {
+            x1: detection.bbox[0] || 0,
+            y1: detection.bbox[1] || 0,
+            x2: detection.bbox[2] || 0,
+            y2: detection.bbox[3] || 0,
+          },
+        }));
+
+        console.log(`Detected ${objects.length} objects`);
+        return { objects };
       } else if (data.status === "failed") {
         throw new Error(data.error || "Object detection failed");
       }
