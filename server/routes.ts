@@ -8,6 +8,11 @@ export function registerRoutes(app: Express): Server {
   // Set up authentication routes
   setupAuth(app);
 
+  // Ensure REPLICATE_API_TOKEN is set
+  if (!process.env.REPLICATE_API_TOKEN) {
+    console.error("Warning: REPLICATE_API_TOKEN environment variable is not set");
+  }
+
   app.post("/api/detect-objects", async (req, res) => {
     try {
       const { image } = req.body;
@@ -20,10 +25,10 @@ export function registerRoutes(app: Express): Server {
 
       const detectionResult = await detectObjectsInImage(image);
       res.json(detectionResult);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Object detection error:", error);
       res.status(500).json({
-        message: "Failed to detect objects in image",
+        message: error.message || "Failed to detect objects in image",
       });
     }
   });
