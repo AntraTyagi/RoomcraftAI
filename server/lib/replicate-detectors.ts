@@ -2,6 +2,25 @@ import Replicate from "replicate";
 
 const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
+const DEFAULT_FURNITURE_QUERY = `
+  table, dining table, coffee table, side table, center table, console table,
+  chair, accent chair, dining chair, office chair, bar stool,
+  sofa, couch, sectional sofa, loveseat,
+  tv console, tv stand, entertainment center,
+  refrigerator, fridge,
+  kitchen counter, kitchen cabinet, kitchen island,
+  bar stools, counter stools,
+  indoor plants, potted plants,
+  wall art, paintings, artwork,
+  curtains, window treatments,
+  bookshelf, shelving unit,
+  bed, headboard,
+  dresser, wardrobe, chest of drawers,
+  desk, work table,
+  ottoman, footstool,
+  cabinet, storage unit
+`.trim().replace(/\s+/g, ' ');
+
 export async function detectObjectsInImage(base64Image: string, query?: string): Promise<{
   objects: Array<{
     label: string;
@@ -35,7 +54,7 @@ export async function detectObjectsInImage(base64Image: string, query?: string):
       {
         input: {
           image: imageUrl,
-          query: query || "furniture, couch, sofa, bed, table, desk, cabinet, dresser",
+          query: query || `Find and identify any of these items in the image: ${DEFAULT_FURNITURE_QUERY}`,
           box_threshold: 0.2,
           text_threshold: 0.2
         }

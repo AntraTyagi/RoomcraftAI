@@ -38,16 +38,16 @@ export default function VirtualStaging() {
   const detectObjectsMutation = useMutation({
     mutationFn: async (params: { image: string; query?: string }) => {
       // Ensure image is properly formatted as a base64 string
-      const base64Image = params.image.startsWith('data:') 
-        ? params.image.split(',')[1] 
+      const base64Image = params.image.startsWith('data:')
+        ? params.image.split(',')[1]
         : params.image;
 
       const response = await fetch("/api/detect-objects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           image: base64Image,
-          query: params.query 
+          query: params.query
         }),
       });
 
@@ -61,8 +61,21 @@ export default function VirtualStaging() {
     onSuccess: (objects) => {
       setDetectedObjects(objects);
       const furnitureObjects = objects.filter(obj =>
-        ['chair', 'couch', 'sofa', 'bed', 'table', 'desk', 'cabinet', 'dresser']
-          .includes(obj.label.toLowerCase())
+        [
+          'table', 'dining table', 'coffee table', 'side table', 'center table', 'console table',
+          'chair', 'accent chair', 'dining chair', 'office chair', 'bar stool',
+          'sofa', 'couch', 'sectional sofa', 'loveseat',
+          'tv console', 'tv stand', 'entertainment center',
+          'refrigerator', 'fridge',
+          'kitchen counter', 'kitchen cabinet', 'kitchen island',
+          'bar stools', 'counter stools',
+          'bookshelf', 'shelving unit',
+          'bed', 'headboard',
+          'dresser', 'wardrobe', 'chest of drawers',
+          'desk', 'work table',
+          'ottoman', 'footstool',
+          'cabinet', 'storage unit'
+        ].includes(obj.label.toLowerCase())
       );
 
       const areas = furnitureObjects.map((obj, index) => ({
@@ -75,6 +88,10 @@ export default function VirtualStaging() {
       }));
 
       setSelectedAreas(areas);
+      toast({
+        title: "Detection Complete",
+        description: `Found ${areas.length} furniture items in the image.`,
+      });
     },
     onError: () => {
       toast({
@@ -253,7 +270,7 @@ export default function VirtualStaging() {
 
   const handleImageUpload = (image: string) => {
     setUploadedImage(image);
-    detectObjectsMutation.mutate({ 
+    detectObjectsMutation.mutate({
       image,
       query: "furniture, couch, sofa, bed, table, desk, cabinet, dresser"
     });
