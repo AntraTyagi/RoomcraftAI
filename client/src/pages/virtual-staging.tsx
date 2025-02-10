@@ -121,6 +121,62 @@ export default function VirtualStaging() {
       // Convert mask to base64
       const maskBase64 = canvas.toDataURL('image/png').split(',')[1];
 
+      // For debugging - save input image
+      const debugInputCanvas = document.createElement('canvas');
+      debugInputCanvas.width = img.width;
+      debugInputCanvas.height = img.height;
+      const debugInputCtx = debugInputCanvas.getContext('2d');
+      if (debugInputCtx) {
+        debugInputCtx.drawImage(img, 0, 0);
+        console.log("Input image (PNG):", debugInputCanvas.toDataURL('image/png'));
+      }
+
+      // For debugging - save mask image
+      const debugMaskCanvas = document.createElement('canvas');
+      debugMaskCanvas.width = img.width;
+      debugMaskCanvas.height = img.height;
+      const debugMaskCtx = debugMaskCanvas.getContext('2d');
+      if (debugMaskCtx) {
+        // Fill the mask with black (transparent)
+        debugMaskCtx.fillStyle = 'black';
+        debugMaskCtx.fillRect(0, 0, debugMaskCanvas.width, debugMaskCanvas.height);
+
+        // Fill the selected areas with white (areas to inpaint)
+        debugMaskCtx.fillStyle = 'white';
+        selectedAreas.forEach(area => {
+          const containerWidth = document.getElementById('comparison-slider')?.clientWidth || canvas.width;
+          const containerHeight = document.getElementById('comparison-slider')?.clientHeight || canvas.height;
+          const x = (area.x / containerWidth) * canvas.width;
+          const y = (area.y / containerHeight) * canvas.height;
+          const width = (area.width / containerWidth) * canvas.width;
+          const height = (area.height / containerHeight) * canvas.height;
+          debugMaskCtx.fillRect(x, y, width, height);
+        });
+        console.log("Mask image (PNG):", debugMaskCanvas.toDataURL('image/png'));
+      }
+
+      // Create a combined debug visualization
+      const debugVisCanvas = document.createElement('canvas');
+      debugVisCanvas.width = img.width;
+      debugVisCanvas.height = img.height;
+      const debugVisCtx = debugVisCanvas.getContext('2d');
+      if (debugVisCtx) {
+        // Draw original image
+        debugVisCtx.drawImage(img, 0, 0);
+        // Draw mask with semi-transparency
+        debugVisCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        selectedAreas.forEach(area => {
+          const containerWidth = document.getElementById('comparison-slider')?.clientWidth || canvas.width;
+          const containerHeight = document.getElementById('comparison-slider')?.clientHeight || canvas.height;
+          const x = (area.x / containerWidth) * canvas.width;
+          const y = (area.y / containerHeight) * canvas.height;
+          const width = (area.width / containerWidth) * canvas.width;
+          const height = (area.height / containerHeight) * canvas.height;
+          debugVisCtx.fillRect(x, y, width, height);
+        });
+        console.log("Debug visualization (PNG):", debugVisCanvas.toDataURL('image/png'));
+      }
+
       // Generate a detailed prompt based on the selected furniture
       const prompt = `Replace the masked area with ${selectedFurniture.name.toLowerCase()}, ${selectedFurniture.description}, 
         high-quality interior design photography, detailed materials and textures, 8k resolution, professional interior photograph, 
@@ -133,27 +189,6 @@ export default function VirtualStaging() {
         selectedAreas: selectedAreas.length
       });
 
-      // For debugging - display the mask
-      const debugCanvas = document.createElement('canvas');
-      debugCanvas.width = img.width;
-      debugCanvas.height = img.height;
-      const debugCtx = debugCanvas.getContext('2d');
-      if (debugCtx) {
-        // Draw original image
-        debugCtx.drawImage(img, 0, 0);
-        // Draw mask with semi-transparency
-        debugCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-        selectedAreas.forEach(area => {
-          const containerWidth = document.getElementById('comparison-slider')?.clientWidth || canvas.width;
-          const containerHeight = document.getElementById('comparison-slider')?.clientHeight || canvas.height;
-          const x = (area.x / containerWidth) * canvas.width;
-          const y = (area.y / containerHeight) * canvas.height;
-          const width = (area.width / containerWidth) * canvas.width;
-          const height = (area.height / containerHeight) * canvas.height;
-          debugCtx.fillRect(x, y, width, height);
-        });
-        console.log("Debug visualization:", debugCanvas.toDataURL());
-      }
 
       // Call the inpainting endpoint
       const response = await fetch("/api/inpaint", {
