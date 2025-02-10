@@ -13,13 +13,37 @@ export async function inpaintFurniture(
   }
 
   try {
-    console.log("Starting inpainting with prompt:", prompt);
+    console.log("Starting inpainting with:", {
+      promptLength: prompt.length,
+      maskLength: mask.length,
+      imageLength: image.length
+    });
 
     // Convert inputs to data URLs if they aren't already
     const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
     const maskUrl = mask.startsWith('data:') ? mask : `data:image/png;base64,${mask}`;
 
-    console.log("Sending request to stability-ai/stable-diffusion-inpainting model");
+    const requestBody = {
+      version: "95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3",
+      input: {
+        image: imageUrl,
+        mask: maskUrl,
+        prompt,
+        width: 512,
+        height: 512,
+        scheduler: "DPMSolverMultistep",
+        num_outputs: 1,
+        guidance_scale: 7.5,
+        num_inference_steps: 25
+      },
+    };
+
+    console.log("Sending request to Replicate API with config:", {
+      modelVersion: requestBody.version,
+      prompt: requestBody.input.prompt,
+      scheduler: requestBody.input.scheduler,
+      steps: requestBody.input.num_inference_steps
+    });
 
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
@@ -27,30 +51,17 @@ export async function inpaintFurniture(
         "Content-Type": "application/json",
         Authorization: `Token ${token}`,
       },
-      body: JSON.stringify({
-        version: "95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3",
-        input: {
-          image: imageUrl,
-          mask: maskUrl,
-          prompt: prompt,
-          width: 512,
-          height: 512,
-          scheduler: "DPMSolverMultistep",
-          num_outputs: 1,
-          guidance_scale: 7.5,
-          num_inference_steps: 25
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error("Replicate API error response:", error);
-      throw new Error(`Failed to start inpainting: ${error}`);
+      const errorText = await response.text();
+      console.error("Replicate API error response:", errorText);
+      throw new Error(`Failed to start inpainting: ${errorText}`);
     }
 
     const prediction = await response.json();
-    console.log("Inpainting started:", prediction.id);
+    console.log("Inpainting started with prediction ID:", prediction.id);
 
     // Poll for results
     const getResult = async (url: string): Promise<string> => {
@@ -68,8 +79,8 @@ export async function inpaintFurniture(
         throw new Error(`Failed to get prediction result: ${error}`);
       }
 
-      const data = await result.json() as any;
-      console.log("Inpainting status:", data.status);
+      const data = await result.json();
+      console.log("Inpainting status:", data.status, "Response data:", data);
 
       if (data.status === "succeeded") {
         console.log("Inpainting completed successfully");
@@ -87,7 +98,7 @@ export async function inpaintFurniture(
       return getResult(url);
     };
 
-    return getResult((prediction as any).urls.get);
+    return getResult(prediction.urls.get);
   } catch (error) {
     console.error("Inpainting error:", error);
     throw error;

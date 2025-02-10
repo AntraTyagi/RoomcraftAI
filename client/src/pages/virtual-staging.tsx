@@ -110,24 +110,35 @@ export default function VirtualStaging() {
         const height = (area.height / containerHeight) * canvas.height;
 
         ctx.fillRect(x, y, width, height);
+
+        // Log mask coordinates for debugging
+        console.log("Generated mask area:", { x, y, width, height,
+          containerWidth, containerHeight,
+          canvasWidth: canvas.width,
+          canvasHeight: canvas.height });
       });
 
       // Convert mask to base64
       const maskBase64 = canvas.toDataURL('image/png').split(',')[1];
 
       // Generate a detailed prompt based on the selected furniture
-      const prompt = `a photorealistic ${selectedFurniture.name.toLowerCase()} in the room, ${selectedFurniture.description}, 
-        perfectly placed in the masked area, matching the room's lighting and style, high-quality interior design photography, 
-        natural placement, detailed materials and textures, 8k resolution, professional interior photograph`;
+      const prompt = `Replace the masked area with ${selectedFurniture.name.toLowerCase()}, ${selectedFurniture.description}, 
+        high-quality interior design photography, detailed materials and textures, 8k resolution, professional interior photograph, 
+        perfect lighting, ultra realistic`;
 
-      console.log("Generated mask and prompt:", { prompt });
+      console.log("Sending inpainting request:", {
+        maskSize: maskBase64.length,
+        prompt,
+        imageSize: uploadedImage.length,
+        selectedAreas: selectedAreas.length
+      });
 
       // Call the inpainting endpoint
       const response = await fetch("/api/inpaint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          image: uploadedImage,
+          image: uploadedImage.split(',')[1], // Remove data URL prefix if present
           mask: maskBase64,
           prompt,
         }),
