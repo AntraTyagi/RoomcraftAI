@@ -26,7 +26,8 @@ export async function inpaintFurniture(
         input: {
           image: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`,
           mask: mask.startsWith('data:') ? mask : `data:image/png;base64,${mask}`,
-          prompt: prompt,
+          prompt: `${prompt}, ultra realistic, professional interior photography, 8k uhd, detailed texture, perfect lighting`,
+          negative_prompt: "blurry, low quality, distorted, deformed, unrealistic, cartoon, artistic",
           num_outputs: 1,
           guidance_scale: 7.5,
           num_inference_steps: 50,

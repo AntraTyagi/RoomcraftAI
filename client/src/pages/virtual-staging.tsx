@@ -81,10 +81,13 @@ export default function VirtualStaging() {
       // Create a canvas to generate the mask
       const canvas = document.createElement('canvas');
       const img = new Image();
-      await new Promise((resolve) => {
+      await new Promise((resolve, reject) => {
         img.onload = resolve;
+        img.onerror = reject;
         img.src = uploadedImage;
       });
+
+      // Set canvas size to match original image
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
@@ -97,16 +100,23 @@ export default function VirtualStaging() {
       // Fill the selected areas with white (areas to inpaint)
       ctx.fillStyle = 'white';
       selectedAreas.forEach(area => {
-        // Convert coordinates to match original image dimensions
-        const x = (area.x / canvas.width) * img.width;
-        const y = (area.y / canvas.height) * img.height;
-        const width = (area.width / canvas.width) * img.width;
-        const height = (area.height / canvas.height) * img.height;
+        // Calculate the actual dimensions relative to the original image
+        const containerWidth = document.getElementById('comparison-slider')?.clientWidth || canvas.width;
+        const containerHeight = document.getElementById('comparison-slider')?.clientHeight || canvas.height;
+
+        const x = (area.x / containerWidth) * canvas.width;
+        const y = (area.y / containerHeight) * canvas.height;
+        const width = (area.width / containerWidth) * canvas.width;
+        const height = (area.height / containerHeight) * canvas.height;
+
         ctx.fillRect(x, y, width, height);
       });
 
       // Convert mask to base64
       const maskBase64 = canvas.toDataURL('image/png').split(',')[1];
+
+      // Construct a detailed prompt for better results
+      const prompt = `high-quality ${selectedFurniture.name.toLowerCase()} in a room, positioned naturally in the scene, matching the room's style and lighting, photorealistic interior design, detailed materials and textures`;
 
       // Call the inpainting endpoint
       const response = await fetch("/api/inpaint", {
@@ -115,7 +125,7 @@ export default function VirtualStaging() {
         body: JSON.stringify({
           image: uploadedImage,
           mask: maskBase64,
-          prompt: `high-quality ${selectedFurniture.name.toLowerCase()} in a room, professional interior photography, detailed texture`,
+          prompt,
         }),
       });
 
@@ -124,12 +134,23 @@ export default function VirtualStaging() {
         throw new Error(error);
       }
 
-      return response.json();
+      const data = await response.json();
+
+      if (!data.inpaintedImage) {
+        throw new Error("No inpainted image received from the server");
+      }
+
+      return data;
     },
     onSuccess: (data) => {
       setStagedImage(data.inpaintedImage);
+      toast({
+        title: "Success",
+        description: "Furniture replacement completed successfully",
+      });
     },
     onError: (error: Error) => {
+      console.error("Staging error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to generate staged design. Please try again.",
@@ -238,6 +259,7 @@ export default function VirtualStaging() {
                 beforeImage={uploadedImage}
                 afterImage={stagedImage}
                 className="w-full"
+                id="comparison-slider" // Added ID for size calculation
               />
             ) : uploadedImage ? (
               <div className="relative w-full aspect-[4/3]">
