@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -8,7 +8,7 @@ import AreaSelector, { type Area } from "@/components/area-selector";
 import FurnitureCollection, { type FurnitureItem } from "@/components/furniture-collection";
 import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
-import DebugPanel from "@/components/debug-panel"; // Assuming this component is defined elsewhere
+import DebugPanel from "@/components/debug-panel";
 
 interface DetectedObject {
   label: string;
@@ -33,6 +33,7 @@ export default function VirtualStaging() {
     visualization?: string;
   }>({});
   const { toast } = useToast();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const detectObjectsMutation = useMutation({
     mutationFn: async (image: string) => {
@@ -51,13 +52,11 @@ export default function VirtualStaging() {
     },
     onSuccess: (objects) => {
       setDetectedObjects(objects);
-      // Filter for furniture items only
       const furnitureObjects = objects.filter(obj =>
         ['chair', 'couch', 'sofa', 'bed', 'table', 'desk', 'cabinet', 'dresser']
           .includes(obj.label.toLowerCase())
       );
 
-      // Convert detected objects to areas
       const areas = furnitureObjects.map((obj, index) => ({
         id: `detected-${index}`,
         x: obj.box.x1,
@@ -103,11 +102,15 @@ export default function VirtualStaging() {
       ctx.fillStyle = 'black';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Get the container dimensions from the DOM
-      const container = document.getElementById('comparison-slider');
-      const containerRect = container?.getBoundingClientRect();
-      if (!containerRect) {
-        throw new Error("Could not find container dimensions");
+      // Get the container dimensions using the ref
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      if (!containerRect || containerRect.width === 0) {
+        toast({
+          title: "Error",
+          description: "Could not determine image dimensions. Please try again.",
+          variant: "destructive",
+        });
+        throw new Error("Invalid container dimensions");
       }
 
       // Fill the selected areas with white (areas to inpaint)
@@ -336,14 +339,15 @@ export default function VirtualStaging() {
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Room Preview</h2>
             {uploadedImage && stagedImage ? (
-              <ComparisonSlider
-                beforeImage={uploadedImage}
-                afterImage={stagedImage}
-                className="w-full"
-                id="comparison-slider"
-              />
+              <div ref={containerRef} id="comparison-slider">
+                <ComparisonSlider
+                  beforeImage={uploadedImage}
+                  afterImage={stagedImage}
+                  className="w-full"
+                />
+              </div>
             ) : uploadedImage ? (
-              <div className="relative w-full aspect-[4/3]">
+              <div ref={containerRef} id="comparison-slider" className="relative w-full aspect-[4/3]">
                 <img
                   src={uploadedImage}
                   alt="Original room"
@@ -367,7 +371,7 @@ export default function VirtualStaging() {
                 ))}
               </div>
             ) : (
-              <div className="w-full aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
+              <div ref={containerRef} id="comparison-slider" className="w-full aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
                 <p className="text-muted-foreground">
                   Upload an image to see preview
                 </p>
