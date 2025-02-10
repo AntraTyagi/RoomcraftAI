@@ -17,7 +17,7 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/detect-objects", async (req, res) => {
     try {
-      const { image } = req.body;
+      const { image, query } = req.body;
 
       if (!image) {
         return res.status(400).json({
@@ -25,7 +25,7 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      const detectionResult = await detectObjectsInImage(image);
+      const detectionResult = await detectObjectsInImage(image, query);
       res.json(detectionResult);
     } catch (error: any) {
       console.error("Object detection error:", error);

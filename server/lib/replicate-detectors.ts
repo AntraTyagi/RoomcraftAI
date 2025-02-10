@@ -1,8 +1,8 @@
-import fetch from "node-fetch";
+import Replicate from "replicate";
 
 const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
-export async function detectObjectsInImage(base64Image: string): Promise<{
+export async function detectObjectsInImage(base64Image: string, query?: string): Promise<{
   objects: Array<{
     label: string;
     confidence: number;
@@ -25,78 +25,40 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
       ? base64Image 
       : `data:image/jpeg;base64,${base64Image}`;
 
-    console.log("Initiating YOLOX object detection request");
-    console.log("Model: daanelson/yolox");
+    console.log("Initiating Grounding DINO detection request");
+    console.log("Model: adirik/grounding-dino");
 
-    const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${token}`,
-      },
-      body: JSON.stringify({
-        version: "ae0d70cebf6afb2ac4f5e4375eb599c178238b312c8325a9a114827ba869e3e9",
+    const replicate = new Replicate({ auth: token });
+
+    const output = await replicate.run(
+      "adirik/grounding-dino:efd10a8ddc57ea28773327e881ce95e20cc1d734c589f7dd01d2036921ed78aa",
+      {
         input: {
-          input_image: imageUrl,
-          threshold: 0.3, // Lower threshold for better detection
-        },
-      }),
-    });
-
-    const responseData = await response.json();
-    console.log("API Response status:", response.status);
-
-    if (!response.ok) {
-      console.error("YOLOX API error response:", responseData);
-      throw new Error(`YOLOX API error: ${JSON.stringify(responseData)}`);
-    }
-
-    console.log("Successfully created prediction:", responseData.id);
-
-    // Poll for results
-    const getResult = async (url: string): Promise<any> => {
-      console.log("Polling for results at:", url);
-
-      const result = await fetch(url, {
-        headers: {
-          Authorization: `Token ${token}`,
-        },
-      });
-
-      const data = await result.json();
-
-      if (!result.ok) {
-        console.error("Prediction status error:", data);
-        throw new Error(`Failed to get prediction result: ${JSON.stringify(data)}`);
+          image: imageUrl,
+          query: query || "furniture, couch, sofa, bed, table, desk, cabinet, dresser",
+          box_threshold: 0.2,
+          text_threshold: 0.2
+        }
       }
+    );
 
-      console.log("Prediction status:", data.status);
+    console.log("Detection completed:", output);
 
-      if (data.status === "succeeded") {
-        // Parse YOLOX output format
-        const objects = data.output.map((detection: any) => ({
-          label: detection.label || "unknown",
-          confidence: detection.confidence || 0,
-          box: {
-            x1: detection.bbox[0] || 0,
-            y1: detection.bbox[1] || 0,
-            x2: detection.bbox[2] || 0,
-            y2: detection.bbox[3] || 0,
-          },
-        }));
-
-        console.log(`Detected ${objects.length} objects`);
-        return { objects };
-      } else if (data.status === "failed") {
-        throw new Error(data.error || "Object detection failed");
+    // Convert Grounding DINO output format to our API format
+    const objects = (output as any).detections.map((detection: any) => ({
+      label: detection.label,
+      confidence: 0.9, // Grounding DINO doesn't provide confidence scores
+      box: {
+        x1: detection.bbox[0],
+        y1: detection.bbox[1],
+        x2: detection.bbox[2],
+        y2: detection.bbox[3]
       }
+    }));
 
-      // Continue polling every 1 second
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return getResult(url);
-    };
+    console.log(`Detected ${objects.length} objects`);
+    return { objects };
 
-    return getResult(responseData.urls.get);
   } catch (error) {
     console.error("Object detection error:", error);
     throw error;

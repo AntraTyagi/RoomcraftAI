@@ -36,16 +36,19 @@ export default function VirtualStaging() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const detectObjectsMutation = useMutation({
-    mutationFn: async (image: string) => {
+    mutationFn: async (params: { image: string; query?: string }) => {
       // Ensure image is properly formatted as a base64 string
-      const base64Image = image.startsWith('data:') 
-        ? image.split(',')[1] 
-        : image;
+      const base64Image = params.image.startsWith('data:') 
+        ? params.image.split(',')[1] 
+        : params.image;
 
       const response = await fetch("/api/detect-objects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64Image }),
+        body: JSON.stringify({ 
+          image: base64Image,
+          query: params.query 
+        }),
       });
 
       if (!response.ok) {
@@ -250,7 +253,10 @@ export default function VirtualStaging() {
 
   const handleImageUpload = (image: string) => {
     setUploadedImage(image);
-    detectObjectsMutation.mutate(image);
+    detectObjectsMutation.mutate({ 
+      image,
+      query: "furniture, couch, sofa, bed, table, desk, cabinet, dresser"
+    });
   };
 
   const handleGenerate = () => {
