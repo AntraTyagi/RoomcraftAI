@@ -28,13 +28,17 @@ export async function inpaintFurniture(
         Authorization: `Token ${token}`,
       },
       body: JSON.stringify({
-        version: "be04660a5b93ef2aff61e3668dedb4cbeb14941e62a3fd5998506626478d8fd0",
+        version: "95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3",
         input: {
           image: imageUrl,
           mask: maskUrl,
           prompt: prompt,
-          num_inference_steps: 50,
+          width: 512,
+          height: 512,
+          scheduler: "DPMSolverMultistep",
+          num_outputs: 1,
           guidance_scale: 7.5,
+          num_inference_steps: 25
         },
       }),
     });
