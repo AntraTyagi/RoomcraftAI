@@ -103,17 +103,25 @@ export default function VirtualStaging() {
       ctx.fillStyle = 'black';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      // Get the container dimensions from the DOM
+      const container = document.getElementById('comparison-slider');
+      const containerRect = container?.getBoundingClientRect();
+      if (!containerRect) {
+        throw new Error("Could not find container dimensions");
+      }
+
       // Fill the selected areas with white (areas to inpaint)
       ctx.fillStyle = 'white';
       selectedAreas.forEach(area => {
-        // Calculate the actual dimensions relative to the original image
-        const containerWidth = document.getElementById('comparison-slider')?.clientWidth || canvas.width;
-        const containerHeight = document.getElementById('comparison-slider')?.clientHeight || canvas.height;
+        // Calculate scaling factors between container and actual image dimensions
+        const scaleX = img.width / containerRect.width;
+        const scaleY = img.height / containerRect.height;
 
-        const x = (area.x / containerWidth) * canvas.width;
-        const y = (area.y / containerHeight) * canvas.height;
-        const width = (area.width / containerWidth) * canvas.width;
-        const height = (area.height / containerHeight) * canvas.height;
+        // Scale the coordinates from screen space to image space
+        const x = area.x * scaleX;
+        const y = area.y * scaleY;
+        const width = area.width * scaleX;
+        const height = area.height * scaleY;
 
         ctx.fillRect(x, y, width, height);
       });
@@ -145,12 +153,15 @@ export default function VirtualStaging() {
         // Fill the selected areas with white (areas to inpaint)
         debugMaskCtx.fillStyle = 'white';
         selectedAreas.forEach(area => {
-          const containerWidth = document.getElementById('comparison-slider')?.clientWidth || canvas.width;
-          const containerHeight = document.getElementById('comparison-slider')?.clientHeight || canvas.height;
-          const x = (area.x / containerWidth) * canvas.width;
-          const y = (area.y / containerHeight) * canvas.height;
-          const width = (area.width / containerWidth) * canvas.width;
-          const height = (area.height / containerHeight) * canvas.height;
+          // Use the same scaling as above
+          const scaleX = img.width / containerRect.width;
+          const scaleY = img.height / containerRect.height;
+
+          const x = area.x * scaleX;
+          const y = area.y * scaleY;
+          const width = area.width * scaleX;
+          const height = area.height * scaleY;
+
           debugMaskCtx.fillRect(x, y, width, height);
         });
         const maskImageUrl = debugMaskCanvas.toDataURL('image/png');
@@ -168,12 +179,15 @@ export default function VirtualStaging() {
         // Draw mask with semi-transparency
         debugVisCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
         selectedAreas.forEach(area => {
-          const containerWidth = document.getElementById('comparison-slider')?.clientWidth || canvas.width;
-          const containerHeight = document.getElementById('comparison-slider')?.clientHeight || canvas.height;
-          const x = (area.x / containerWidth) * canvas.width;
-          const y = (area.y / containerHeight) * canvas.height;
-          const width = (area.width / containerWidth) * canvas.width;
-          const height = (area.height / containerHeight) * canvas.height;
+          // Use the same scaling as above
+          const scaleX = img.width / containerRect.width;
+          const scaleY = img.height / containerRect.height;
+
+          const x = area.x * scaleX;
+          const y = area.y * scaleY;
+          const width = area.width * scaleX;
+          const height = area.height * scaleY;
+
           debugVisCtx.fillRect(x, y, width, height);
         });
         const visualizationUrl = debugVisCanvas.toDataURL('image/png');
