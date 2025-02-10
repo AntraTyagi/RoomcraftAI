@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { generateDesign } from "./lib/replicate";
 import { setupAuth } from "./auth";
 import { detectObjectsInImage } from "./lib/replicate-detectors";
+import { inpaintFurniture } from "./lib/replicate-inpainting";
 import { generateFurnitureImage } from "./lib/replicate-furniture";
 
 export function registerRoutes(app: Express): Server {
@@ -30,6 +31,26 @@ export function registerRoutes(app: Express): Server {
       console.error("Object detection error:", error);
       res.status(500).json({
         message: error.message || "Failed to detect objects in image",
+      });
+    }
+  });
+
+  app.post("/api/inpaint", async (req, res) => {
+    try {
+      const { image, mask, prompt } = req.body;
+
+      if (!image || !mask || !prompt) {
+        return res.status(400).json({
+          message: "Image, mask, and prompt are required",
+        });
+      }
+
+      const inpaintedImage = await inpaintFurniture(image, mask, prompt);
+      res.json({ inpaintedImage });
+    } catch (error: any) {
+      console.error("Inpainting error:", error);
+      res.status(500).json({
+        message: error.message || "Failed to inpaint image",
       });
     }
   });

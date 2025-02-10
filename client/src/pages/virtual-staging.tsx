@@ -46,7 +46,7 @@ export default function VirtualStaging() {
     onSuccess: (objects) => {
       setDetectedObjects(objects);
       // Filter for furniture items only
-      const furnitureObjects = objects.filter(obj => 
+      const furnitureObjects = objects.filter(obj =>
         ['chair', 'couch', 'sofa', 'bed', 'table', 'desk', 'cabinet', 'dresser']
           .includes(obj.label.toLowerCase())
       );
@@ -74,29 +74,65 @@ export default function VirtualStaging() {
 
   const stagingMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/virtual-staging", {
+      if (!selectedAreas.length || !selectedFurniture || !uploadedImage) {
+        throw new Error("Missing required data for staging");
+      }
+
+      // Create a canvas to generate the mask
+      const canvas = document.createElement('canvas');
+      const img = new Image();
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.src = uploadedImage;
+      });
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error("Failed to get canvas context");
+
+      // Fill the mask with black (transparent)
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Fill the selected areas with white (areas to inpaint)
+      ctx.fillStyle = 'white';
+      selectedAreas.forEach(area => {
+        // Convert coordinates to match original image dimensions
+        const x = (area.x / canvas.width) * img.width;
+        const y = (area.y / canvas.height) * img.height;
+        const width = (area.width / canvas.width) * img.width;
+        const height = (area.height / canvas.height) * img.height;
+        ctx.fillRect(x, y, width, height);
+      });
+
+      // Convert mask to base64
+      const maskBase64 = canvas.toDataURL('image/png').split(',')[1];
+
+      // Call the inpainting endpoint
+      const response = await fetch("/api/inpaint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image: uploadedImage,
-          areas: selectedAreas,
-          furnitureId: selectedFurniture?.id,
+          mask: maskBase64,
+          prompt: `high-quality ${selectedFurniture.name.toLowerCase()} in a room, professional interior photography, detailed texture`,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate staged design");
+        const error = await response.text();
+        throw new Error(error);
       }
 
       return response.json();
     },
     onSuccess: (data) => {
-      setStagedImage(data.originalImage);
+      setStagedImage(data.inpaintedImage);
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to generate staged design. Please try again.",
+        description: error.message || "Failed to generate staged design. Please try again.",
         variant: "destructive",
       });
     },
