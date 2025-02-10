@@ -8,6 +8,7 @@ import AreaSelector, { type Area } from "@/components/area-selector";
 import FurnitureCollection, { type FurnitureItem } from "@/components/furniture-collection";
 import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
+import DebugPanel from "@/components/debug-panel"; // Assuming this component is defined elsewhere
 
 interface DetectedObject {
   label: string;
@@ -26,6 +27,11 @@ export default function VirtualStaging() {
   const [selectedFurniture, setSelectedFurniture] = useState<FurnitureItem | null>(null);
   const [stagedImage, setStagedImage] = useState<string | null>(null);
   const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
+  const [debugImages, setDebugImages] = useState<{
+    input?: string;
+    mask?: string;
+    visualization?: string;
+  }>({});
   const { toast } = useToast();
 
   const detectObjectsMutation = useMutation({
@@ -110,12 +116,6 @@ export default function VirtualStaging() {
         const height = (area.height / containerHeight) * canvas.height;
 
         ctx.fillRect(x, y, width, height);
-
-        // Log mask coordinates for debugging
-        console.log("Generated mask area:", { x, y, width, height,
-          containerWidth, containerHeight,
-          canvasWidth: canvas.width,
-          canvasHeight: canvas.height });
       });
 
       // Convert mask to base64
@@ -128,7 +128,8 @@ export default function VirtualStaging() {
       const debugInputCtx = debugInputCanvas.getContext('2d');
       if (debugInputCtx) {
         debugInputCtx.drawImage(img, 0, 0);
-        console.log("Input image (PNG):", debugInputCanvas.toDataURL('image/png'));
+        const inputImageUrl = debugInputCanvas.toDataURL('image/png');
+        setDebugImages(prev => ({ ...prev, input: inputImageUrl }));
       }
 
       // For debugging - save mask image
@@ -152,7 +153,8 @@ export default function VirtualStaging() {
           const height = (area.height / containerHeight) * canvas.height;
           debugMaskCtx.fillRect(x, y, width, height);
         });
-        console.log("Mask image (PNG):", debugMaskCanvas.toDataURL('image/png'));
+        const maskImageUrl = debugMaskCanvas.toDataURL('image/png');
+        setDebugImages(prev => ({ ...prev, mask: maskImageUrl }));
       }
 
       // Create a combined debug visualization
@@ -174,7 +176,8 @@ export default function VirtualStaging() {
           const height = (area.height / containerHeight) * canvas.height;
           debugVisCtx.fillRect(x, y, width, height);
         });
-        console.log("Debug visualization (PNG):", debugVisCanvas.toDataURL('image/png'));
+        const visualizationUrl = debugVisCanvas.toDataURL('image/png');
+        setDebugImages(prev => ({ ...prev, visualization: visualizationUrl }));
       }
 
       // Generate a detailed prompt based on the selected furniture
@@ -182,20 +185,12 @@ export default function VirtualStaging() {
         high-quality interior design photography, detailed materials and textures, 8k resolution, professional interior photograph, 
         perfect lighting, ultra realistic`;
 
-      console.log("Sending inpainting request:", {
-        maskSize: maskBase64.length,
-        prompt,
-        imageSize: uploadedImage.length,
-        selectedAreas: selectedAreas.length
-      });
-
-
       // Call the inpainting endpoint
       const response = await fetch("/api/inpaint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          image: uploadedImage.split(',')[1], // Remove data URL prefix if present
+          image: uploadedImage.split(',')[1],
           mask: maskBase64,
           prompt,
         }),
@@ -367,6 +362,11 @@ export default function VirtualStaging() {
           </Card>
         </div>
       </div>
+      <DebugPanel
+        inputImage={debugImages.input}
+        maskImage={debugImages.mask}
+        visualizationImage={debugImages.visualization}
+      />
     </div>
   );
 }
