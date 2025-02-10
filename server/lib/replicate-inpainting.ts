@@ -22,16 +22,14 @@ export async function inpaintFurniture(
         Authorization: `Token ${token}`,
       },
       body: JSON.stringify({
-        version: "c11bac58203367db93a3c552bd49a25a5418458ddffb7e90dae55780765e26d6",
+        version: "0c1efcf33ee5a07b0ec1dfed3ef6c51c6f9d1c3149335215ca5704ab398a7f37",
         input: {
-          image: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`,
-          mask: mask.startsWith('data:') ? mask : `data:image/png;base64,${mask}`,
           prompt: `${prompt}, ultra realistic, professional interior photography, 8k uhd, detailed texture, perfect lighting`,
           negative_prompt: "blurry, low quality, distorted, deformed, unrealistic, cartoon, artistic",
-          num_outputs: 1,
-          guidance_scale: 7.5,
+          image: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`,
+          mask: mask.startsWith('data:') ? mask : `data:image/png;base64,${mask}`,
           num_inference_steps: 50,
-          scheduler: "K_EULER_ANCESTRAL",
+          guidance_scale: 7.5,
         },
       }),
     });
@@ -66,6 +64,9 @@ export async function inpaintFurniture(
 
       if (data.status === "succeeded") {
         console.log("Inpainting completed successfully");
+        if (!data.output || !data.output[0]) {
+          throw new Error("No output image received from the model");
+        }
         return data.output[0] as string;
       } else if (data.status === "failed") {
         console.error("Inpainting failed:", data.error);
