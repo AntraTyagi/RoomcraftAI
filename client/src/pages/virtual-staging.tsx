@@ -133,6 +133,28 @@ export default function VirtualStaging() {
         selectedAreas: selectedAreas.length
       });
 
+      // For debugging - display the mask
+      const debugCanvas = document.createElement('canvas');
+      debugCanvas.width = img.width;
+      debugCanvas.height = img.height;
+      const debugCtx = debugCanvas.getContext('2d');
+      if (debugCtx) {
+        // Draw original image
+        debugCtx.drawImage(img, 0, 0);
+        // Draw mask with semi-transparency
+        debugCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        selectedAreas.forEach(area => {
+          const containerWidth = document.getElementById('comparison-slider')?.clientWidth || canvas.width;
+          const containerHeight = document.getElementById('comparison-slider')?.clientHeight || canvas.height;
+          const x = (area.x / containerWidth) * canvas.width;
+          const y = (area.y / containerHeight) * canvas.height;
+          const width = (area.width / containerWidth) * canvas.width;
+          const height = (area.height / containerHeight) * canvas.height;
+          debugCtx.fillRect(x, y, width, height);
+        });
+        console.log("Debug visualization:", debugCanvas.toDataURL());
+      }
+
       // Call the inpainting endpoint
       const response = await fetch("/api/inpaint", {
         method: "POST",

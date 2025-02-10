@@ -23,6 +23,13 @@ export async function inpaintFurniture(
     const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
     const maskUrl = mask.startsWith('data:') ? mask : `data:image/png;base64,${mask}`;
 
+    // Log the first 100 characters of each base64 string for debugging
+    console.log("Input data preview:", {
+      imagePreview: imageUrl.substring(0, 100) + "...",
+      maskPreview: maskUrl.substring(0, 100) + "...",
+      promptPreview: prompt.substring(0, 100) + "..."
+    });
+
     const requestBody = {
       version: "95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3",
       input: {
@@ -42,7 +49,9 @@ export async function inpaintFurniture(
       modelVersion: requestBody.version,
       prompt: requestBody.input.prompt,
       scheduler: requestBody.input.scheduler,
-      steps: requestBody.input.num_inference_steps
+      steps: requestBody.input.num_inference_steps,
+      imageType: typeof imageUrl,
+      maskType: typeof maskUrl
     });
 
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
@@ -80,14 +89,21 @@ export async function inpaintFurniture(
       }
 
       const data = await result.json();
-      console.log("Inpainting status:", data.status, "Response data:", data);
+      console.log("Inpainting status:", data.status, "Response data:", {
+        status: data.status,
+        outputUrl: data.output?.[0] ? data.output[0].substring(0, 100) + "..." : null,
+        error: data.error,
+        logs: data.logs
+      });
 
       if (data.status === "succeeded") {
         console.log("Inpainting completed successfully");
         if (!data.output || !data.output[0]) {
           throw new Error("No output image received from the model");
         }
-        return data.output[0] as string;
+        const outputUrl = data.output[0];
+        console.log("Generated image URL preview:", outputUrl.substring(0, 100) + "...");
+        return outputUrl;
       } else if (data.status === "failed") {
         console.error("Inpainting failed:", data.error);
         throw new Error(data.error || "Inpainting failed");
