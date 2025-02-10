@@ -37,7 +37,7 @@ export async function detectObjectsInImage(base64Image: string): Promise<{
       body: JSON.stringify({
         version: "ae0d70cebf6afb2ac4f5e4375eb599c178238b312c8325a9a114827ba869e3e9",
         input: {
-          image: imageUrl,
+          input_image: imageUrl,
           threshold: 0.3, // Lower threshold for better detection
         },
       }),

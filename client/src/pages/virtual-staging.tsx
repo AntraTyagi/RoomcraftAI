@@ -37,10 +37,15 @@ export default function VirtualStaging() {
 
   const detectObjectsMutation = useMutation({
     mutationFn: async (image: string) => {
+      // Ensure image is properly formatted as a base64 string
+      const base64Image = image.startsWith('data:') 
+        ? image.split(',')[1] 
+        : image;
+
       const response = await fetch("/api/detect-objects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image }),
+        body: JSON.stringify({ image: base64Image }),
       });
 
       if (!response.ok) {
