@@ -15,6 +15,12 @@ export async function inpaintFurniture(
   try {
     console.log("Starting inpainting with prompt:", prompt);
 
+    // Convert inputs to data URLs if they aren't already
+    const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
+    const maskUrl = mask.startsWith('data:') ? mask : `data:image/png;base64,${mask}`;
+
+    console.log("Sending request to stability-ai/stable-diffusion-inpainting model");
+
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
@@ -22,12 +28,11 @@ export async function inpaintFurniture(
         Authorization: `Token ${token}`,
       },
       body: JSON.stringify({
-        version: "0c1efcf33ee5a07b0ec1dfed3ef6c51c6f9d1c3149335215ca5704ab398a7f37",
+        version: "be04660a5b93ef2aff61e3668dedb4cbeb14941e62a3fd5998506626478d8fd0",
         input: {
-          prompt: `${prompt}, ultra realistic, professional interior photography, 8k uhd, detailed texture, perfect lighting`,
-          negative_prompt: "blurry, low quality, distorted, deformed, unrealistic, cartoon, artistic",
-          image: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`,
-          mask: mask.startsWith('data:') ? mask : `data:image/png;base64,${mask}`,
+          image: imageUrl,
+          mask: maskUrl,
+          prompt: prompt,
           num_inference_steps: 50,
           guidance_scale: 7.5,
         },

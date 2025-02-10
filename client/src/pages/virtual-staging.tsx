@@ -115,8 +115,12 @@ export default function VirtualStaging() {
       // Convert mask to base64
       const maskBase64 = canvas.toDataURL('image/png').split(',')[1];
 
-      // Construct a detailed prompt for better results
-      const prompt = `high-quality ${selectedFurniture.name.toLowerCase()} in a room, positioned naturally in the scene, matching the room's style and lighting, photorealistic interior design, detailed materials and textures`;
+      // Generate a detailed prompt based on the selected furniture
+      const prompt = `a photorealistic ${selectedFurniture.name.toLowerCase()} in the room, ${selectedFurniture.description}, 
+        perfectly placed in the masked area, matching the room's lighting and style, high-quality interior design photography, 
+        natural placement, detailed materials and textures, 8k resolution, professional interior photograph`;
+
+      console.log("Generated mask and prompt:", { prompt });
 
       // Call the inpainting endpoint
       const response = await fetch("/api/inpaint", {
@@ -259,7 +263,7 @@ export default function VirtualStaging() {
                 beforeImage={uploadedImage}
                 afterImage={stagedImage}
                 className="w-full"
-                id="comparison-slider" // Added ID for size calculation
+                id="comparison-slider"
               />
             ) : uploadedImage ? (
               <div className="relative w-full aspect-[4/3]">
