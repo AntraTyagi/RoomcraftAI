@@ -10,6 +10,8 @@ import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
 import DebugPanel from "@/components/debug-panel";
 
+const DEFAULT_FURNITURE_QUERY = "furniture, couch, sofa, bed, table, desk, cabinet, dresser, indoor plants, potted plants, wall art, paintings, artwork, curtains, window treatments, bookshelf, shelving unit, ottoman, footstool";
+
 interface DetectedObject {
   label: string;
   confidence: number;
@@ -38,16 +40,14 @@ export default function VirtualStaging() {
   const detectObjectsMutation = useMutation({
     mutationFn: async (params: { image: string; query?: string }) => {
       // Ensure image is properly formatted as a base64 string
-      const base64Image = params.image.startsWith('data:')
-        ? params.image.split(',')[1]
-        : params.image;
+      const base64Image = params.image;  // Keep the full data URI
 
       const response = await fetch("/api/detect-objects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image: base64Image,
-          query: params.query
+          query: DEFAULT_FURNITURE_QUERY
         }),
       });
 
@@ -69,6 +69,9 @@ export default function VirtualStaging() {
           'refrigerator', 'fridge',
           'kitchen counter', 'kitchen cabinet', 'kitchen island',
           'bar stools', 'counter stools',
+          'indoor plants', 'potted plants',
+          'wall art', 'paintings, artwork',
+          'curtains', 'window treatments',
           'bookshelf', 'shelving unit',
           'bed', 'headboard',
           'dresser', 'wardrobe', 'chest of drawers',
@@ -272,7 +275,7 @@ export default function VirtualStaging() {
     setUploadedImage(image);
     detectObjectsMutation.mutate({
       image,
-      query: "furniture, couch, sofa, bed, table, desk, cabinet, dresser"
+      query: DEFAULT_FURNITURE_QUERY
     });
   };
 

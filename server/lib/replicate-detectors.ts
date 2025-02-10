@@ -54,7 +54,7 @@ export async function detectObjectsInImage(base64Image: string, query?: string):
       {
         input: {
           image: imageUrl,
-          query: query || `Find and identify any of these items in the image: ${DEFAULT_FURNITURE_QUERY}`,
+          query: query || DEFAULT_FURNITURE_QUERY,
           box_threshold: 0.2,
           text_threshold: 0.2
         }
