@@ -39,8 +39,7 @@ export default function VirtualStaging() {
 
   const detectObjectsMutation = useMutation({
     mutationFn: async (params: { image: string; query?: string }) => {
-      // Ensure image is properly formatted as a base64 string
-      const base64Image = params.image;  // Keep the full data URI
+      const base64Image = params.image;
 
       const response = await fetch("/api/detect-objects", {
         method: "POST",
@@ -111,7 +110,6 @@ export default function VirtualStaging() {
         throw new Error("Missing required data for staging");
       }
 
-      // Create a canvas to generate the mask
       const canvas = document.createElement('canvas');
       const img = new Image();
       await new Promise((resolve, reject) => {
@@ -120,17 +118,14 @@ export default function VirtualStaging() {
         img.src = uploadedImage;
       });
 
-      // Set canvas size to match original image
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error("Failed to get canvas context");
 
-      // Fill the mask with black (transparent)
       ctx.fillStyle = 'black';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Get the container dimensions using the ref
       const containerRect = containerRef.current?.getBoundingClientRect();
       if (!containerRect || containerRect.width === 0) {
         toast({
@@ -141,14 +136,11 @@ export default function VirtualStaging() {
         throw new Error("Invalid container dimensions");
       }
 
-      // Fill the selected areas with white (areas to inpaint)
       ctx.fillStyle = 'white';
       selectedAreas.forEach(area => {
-        // Calculate scaling factors between container and actual image dimensions
         const scaleX = img.width / containerRect.width;
         const scaleY = img.height / containerRect.height;
 
-        // Scale the coordinates from screen space to image space
         const x = area.x * scaleX;
         const y = area.y * scaleY;
         const width = area.width * scaleX;
@@ -157,10 +149,8 @@ export default function VirtualStaging() {
         ctx.fillRect(x, y, width, height);
       });
 
-      // Convert mask to base64
       const maskBase64 = canvas.toDataURL('image/png').split(',')[1];
 
-      // For debugging - save input image
       const debugInputCanvas = document.createElement('canvas');
       debugInputCanvas.width = img.width;
       debugInputCanvas.height = img.height;
@@ -171,20 +161,16 @@ export default function VirtualStaging() {
         setDebugImages(prev => ({ ...prev, input: inputImageUrl }));
       }
 
-      // For debugging - save mask image
       const debugMaskCanvas = document.createElement('canvas');
       debugMaskCanvas.width = img.width;
       debugMaskCanvas.height = img.height;
       const debugMaskCtx = debugMaskCanvas.getContext('2d');
       if (debugMaskCtx) {
-        // Fill the mask with black (transparent)
         debugMaskCtx.fillStyle = 'black';
         debugMaskCtx.fillRect(0, 0, debugMaskCanvas.width, debugMaskCanvas.height);
 
-        // Fill the selected areas with white (areas to inpaint)
         debugMaskCtx.fillStyle = 'white';
         selectedAreas.forEach(area => {
-          // Use the same scaling as above
           const scaleX = img.width / containerRect.width;
           const scaleY = img.height / containerRect.height;
 
@@ -199,18 +185,14 @@ export default function VirtualStaging() {
         setDebugImages(prev => ({ ...prev, mask: maskImageUrl }));
       }
 
-      // Create a combined debug visualization
       const debugVisCanvas = document.createElement('canvas');
       debugVisCanvas.width = img.width;
       debugVisCanvas.height = img.height;
       const debugVisCtx = debugVisCanvas.getContext('2d');
       if (debugVisCtx) {
-        // Draw original image
         debugVisCtx.drawImage(img, 0, 0);
-        // Draw mask with semi-transparency
         debugVisCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
         selectedAreas.forEach(area => {
-          // Use the same scaling as above
           const scaleX = img.width / containerRect.width;
           const scaleY = img.height / containerRect.height;
 
@@ -225,12 +207,25 @@ export default function VirtualStaging() {
         setDebugImages(prev => ({ ...prev, visualization: visualizationUrl }));
       }
 
-      // Generate a detailed prompt based on the selected furniture
-      const prompt = `Replace the masked area with ${selectedFurniture.name.toLowerCase()}, ${selectedFurniture.description}, 
-        high-quality interior design photography, detailed materials and textures, 8k resolution, professional interior photograph, 
-        perfect lighting, ultra realistic`;
+      const matchingObject = detectedObjects.find(obj => {
+        const selectedArea = selectedAreas[0];
+        const objCenterX = (obj.box.x1 + obj.box.x2) / 2;
+        const objCenterY = (obj.box.y1 + obj.box.y2) / 2;
+        const areaCenterX = selectedArea.x + selectedArea.width / 2;
+        const areaCenterY = selectedArea.y + selectedArea.height / 2;
 
-      // Call the inpainting endpoint
+        return Math.abs(objCenterX - areaCenterX) < 50 &&
+               Math.abs(objCenterY - areaCenterY) < 50;
+      });
+
+      const prompt = `Replace the masked area with ${selectedFurniture.name.toLowerCase()}, ${selectedFurniture.description}. 
+        Maintain the exact same position, scale, and perspective as the ${matchingObject?.label || 'furniture'} in the original image.
+        Match the room's lighting conditions and style. High-quality interior design photography, detailed materials and textures,
+        8k resolution, professional interior photograph, perfect lighting, ultra realistic. 
+        The new furniture should fit naturally in the space as if it was originally there.${
+          matchingObject ? ` Replace the existing ${matchingObject.label} while maintaining its exact positioning and scale.` : ''
+        }`;
+
       const response = await fetch("/api/inpaint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -238,6 +233,7 @@ export default function VirtualStaging() {
           image: uploadedImage.split(',')[1],
           mask: maskBase64,
           prompt,
+          detectedObject: matchingObject
         }),
       });
 
@@ -350,6 +346,7 @@ export default function VirtualStaging() {
               <FurnitureCollection
                 onSelect={setSelectedFurniture}
                 selectedItemId={selectedFurniture?.id}
+                detectedObjects={detectedObjects}
               />
             </Card>
           )}
