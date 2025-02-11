@@ -9,11 +9,11 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
-import { launchImageLibrary, launchCamera, ImagePickerResponse } from 'react-native-image-picker';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { useMutation } from '@tanstack/react-query';
+import { SafeAreaView as SafeAreaContext } from 'react-native-safe-area-context';
 import FurnitureCollection from '../components/FurnitureCollection';
 import type { FurnitureItem } from '../../client/src/components/furniture-collection';
 
@@ -22,7 +22,6 @@ const { width } = Dimensions.get('window');
 export default function VirtualStagingScreen() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedFurniture, setSelectedFurniture] = useState<FurnitureItem | null>(null);
-  const [stagedImage, setStagedImage] = useState<string | null>(null);
   const [detectedObjects, setDetectedObjects] = useState<Array<{
     label: string;
     confidence: number;
@@ -59,7 +58,7 @@ export default function VirtualStagingScreen() {
   });
 
   const handleImagePick = async (useCamera: boolean) => {
-    const options: any = {
+    const options = {
       mediaType: 'photo' as const,
       includeBase64: true,
     };
@@ -82,31 +81,40 @@ export default function VirtualStagingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+    <SafeAreaContext style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f4f4f5" />
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upload Room Photo</Text>
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, styles.galleryButton]}
               onPress={() => handleImagePick(false)}
+              activeOpacity={0.7}
             >
               <Text style={styles.buttonText}>Choose from Gallery</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, styles.cameraButton]}
               onPress={() => handleImagePick(true)}
+              activeOpacity={0.7}
             >
               <Text style={styles.buttonText}>Take Photo</Text>
             </TouchableOpacity>
           </View>
 
           {uploadedImage && (
-            <Image
-              source={{ uri: uploadedImage }}
-              style={styles.previewImage}
-              resizeMode="contain"
-            />
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: uploadedImage }}
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            </View>
           )}
 
           {detectObjectsMutation.isPending && (
@@ -128,37 +136,45 @@ export default function VirtualStagingScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </SafeAreaContext>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: '#f4f4f5',
   },
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f5',
+  },
+  contentContainer: {
+    paddingBottom: 24,
   },
   section: {
     marginVertical: 8,
     marginHorizontal: 16,
     padding: 16,
     backgroundColor: '#fff',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
+    fontSize: 22,
+    fontWeight: '700',
     color: '#18181b',
+    marginBottom: 16,
+    letterSpacing: -0.5,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -166,32 +182,44 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryButton: {
     backgroundColor: '#3b82f6',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    width: (width - 64) / 2.2,
+    marginRight: 8,
+  },
+  cameraButton: {
+    backgroundColor: '#3b82f6',
+    marginLeft: 8,
   },
   buttonText: {
     color: '#fff',
-    textAlign: 'center',
-    fontWeight: '600',
     fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+  },
+  imageContainer: {
+    overflow: 'hidden',
+    borderRadius: 12,
+    backgroundColor: '#f4f4f5',
   },
   previewImage: {
     width: '100%',
     height: width * 0.75,
-    marginVertical: 16,
-    borderRadius: 8,
     backgroundColor: '#f4f4f5',
   },
   loadingContainer: {
     alignItems: 'center',
-    marginVertical: 16,
+    paddingVertical: 24,
   },
   loadingText: {
-    marginTop: 8,
+    marginTop: 12,
     fontSize: 16,
     color: '#6b7280',
+    fontWeight: '500',
   },
 });
