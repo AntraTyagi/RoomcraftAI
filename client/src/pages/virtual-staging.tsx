@@ -218,21 +218,13 @@ export default function VirtualStaging() {
                Math.abs(objCenterY - areaCenterY) < 50;
       });
 
-      const prompt = `Replace the masked area with ${selectedFurniture.name.toLowerCase()}, ${selectedFurniture.description}. 
-        Maintain the exact same position, scale, and perspective as the ${matchingObject?.label || 'furniture'} in the original image.
-        Match the room's lighting conditions and style. High-quality interior design photography, detailed materials and textures,
-        8k resolution, professional interior photograph, perfect lighting, ultra realistic. 
-        The new furniture should fit naturally in the space as if it was originally there.${
-          matchingObject ? ` Replace the existing ${matchingObject.label} while maintaining its exact positioning and scale.` : ''
-        }`;
-
       const response = await fetch("/api/inpaint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image: uploadedImage.split(',')[1],
           mask: maskBase64,
-          prompt,
+          furniture: selectedFurniture,
           detectedObject: matchingObject
         }),
       });

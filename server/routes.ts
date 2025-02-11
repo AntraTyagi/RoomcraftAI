@@ -4,7 +4,7 @@ import { generateDesign } from "./lib/replicate";
 import { setupAuth } from "./auth";
 import { detectObjectsInImage } from "./lib/replicate-detectors";
 import { inpaintFurniture } from "./lib/replicate-inpainting";
-import { generateFurnitureImage } from "./lib/replicate-furniture";
+import { generateFurnitureImage, generateInpaintingPrompt } from "./lib/replicate-furniture";
 
 export function registerRoutes(app: Express): Server {
   // Set up authentication routes
@@ -37,13 +37,18 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/inpaint", async (req, res) => {
     try {
-      const { image, mask, prompt } = req.body;
+      const { image, mask, furniture, detectedObject } = req.body;
 
-      if (!image || !mask || !prompt) {
+      if (!image || !mask || !furniture) {
         return res.status(400).json({
-          message: "Image, mask, and prompt are required",
+          message: "Image, mask, and furniture details are required",
         });
       }
+
+      // Generate the enhanced prompt using the furniture details
+      console.log("Generating inpainting prompt for:", furniture.name);
+      const prompt = await generateInpaintingPrompt(furniture, detectedObject);
+      console.log("Generated prompt:", prompt);
 
       const inpaintedImage = await inpaintFurniture(image, mask, prompt);
       res.json({ inpaintedImage });

@@ -4,40 +4,41 @@ const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
 type FurnitureType = "couch" | "bed" | "work_table" | "center_table";
 
-const FURNITURE_PROMPTS: Record<FurnitureType, string[]> = {
-  couch: [
-    "modern minimalist sofa, product photography",
-    "classic leather couch, studio lighting",
-    "contemporary fabric sofa, clean lines",
-    "scandinavian style sofa, natural light",
-    "mid-century modern sofa, professional photo"
-  ],
-  bed: [
-    "modern platform bed, minimal design",
-    "classic wooden bed frame, bedroom setting",
-    "contemporary queen bed, clean design",
-    "rustic wood bed frame, natural finish",
-    "modern bed with headboard, professional photo"
-  ],
-  work_table: [
-    "modern desk, minimal design",
-    "wooden writing desk, office setting",
-    "contemporary desk, clean lines",
-    "industrial style desk, workspace",
-    "minimalist work table, studio photo"
-  ],
-  center_table: [
-    "modern coffee table, minimal design",
-    "wooden coffee table, living room",
-    "glass coffee table, contemporary",
-    "round coffee table, scandinavian style",
-    "industrial coffee table, studio photo"
-  ]
-};
+function createDetailedPrompt(furniture: {
+  name: string;
+  description: string;
+}, matchingObject?: { label: string }) {
+  const styleParts = furniture.name.toLowerCase().split(' ');
+  const styleWords = new Set(['modern', 'classic', 'contemporary', 'scandinavian', 'mid-century', 'minimalist', 'industrial']);
+  const detectedStyle = styleParts.find(word => styleWords.has(word)) || 'contemporary';
 
-export async function generateFurnitureImage(
+  return `Replace the masked area with ${furniture.name.toLowerCase()}, ${furniture.description}. 
+    The furniture style should be ${detectedStyle} with high-end materials and craftsmanship.
+    Maintain the exact same position, scale, and perspective as the ${matchingObject?.label || 'furniture'} in the original image.
+    Match the room's lighting conditions, shadows, and ambient light reflections.
+    Ensure photorealistic rendering with detailed materials, textures, and fabric details.
+    Requirements:
+    - 8k resolution
+    - Professional interior photography quality
+    - Perfect lighting and shadows
+    - Ultra realistic materials
+    - Natural integration with surroundings
+    ${matchingObject ? `Replace the existing ${matchingObject.label} while maintaining its exact positioning, scale, and perspective.` : ''}
+    The new furniture should seamlessly blend with the room's existing aesthetic and appear as if it was originally photographed in place.`;
+}
+
+async function generateInpaintingPrompt(
+  furniture: { name: string; description: string; },
+  matchingObject?: { label: string }
+): Promise<string> {
+  return createDetailedPrompt(furniture, matchingObject);
+}
+
+async function generateFurnitureImage(
   type: FurnitureType,
-  index: number
+  index: number,
+  furniture: { name: string; description: string; },
+  matchingObject?: { label: string }
 ): Promise<string> {
   const token = process.env.REPLICATE_API_KEY?.trim();
   if (!token) {
@@ -45,7 +46,7 @@ export async function generateFurnitureImage(
   }
 
   try {
-    const prompt = FURNITURE_PROMPTS[type][index];
+    const prompt = createDetailedPrompt(furniture, matchingObject);
     console.log("Starting furniture generation with type:", type, "index:", index);
     console.log("Using prompt:", prompt);
 
@@ -93,7 +94,7 @@ export async function generateFurnitureImage(
         throw new Error(`Failed to get prediction result: ${error}`);
       }
 
-      const data = await result.json() as any;
+      const data = await result.json();
       console.log("Generation status:", data.status);
 
       if (data.status === "succeeded") {
@@ -115,3 +116,36 @@ export async function generateFurnitureImage(
     throw error;
   }
 }
+
+const FURNITURE_PROMPTS: Record<FurnitureType, string[]> = {
+  couch: [
+    "modern minimalist sofa, product photography",
+    "classic leather couch, studio lighting",
+    "contemporary fabric sofa, clean lines",
+    "scandinavian style sofa, natural light",
+    "mid-century modern sofa, professional photo"
+  ],
+  bed: [
+    "modern platform bed, minimal design",
+    "classic wooden bed frame, bedroom setting",
+    "contemporary queen bed, clean design",
+    "rustic wood bed frame, natural finish",
+    "modern bed with headboard, professional photo"
+  ],
+  work_table: [
+    "modern desk, minimal design",
+    "wooden writing desk, office setting",
+    "contemporary desk, clean lines",
+    "industrial style desk, workspace",
+    "minimalist work table, studio photo"
+  ],
+  center_table: [
+    "modern coffee table, minimal design",
+    "wooden coffee table, living room",
+    "glass coffee table, contemporary",
+    "round coffee table, scandinavian style",
+    "industrial coffee table, studio photo"
+  ]
+};
+
+export { generateInpaintingPrompt, generateFurnitureImage, FURNITURE_PROMPTS };
