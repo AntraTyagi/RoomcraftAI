@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>RoomcraftAI Mobile</title>
+    <style>
+        /* iPhone 13/14 (6.1-inch) dimensions */
+        :root {
+            --device-width: 390px;
+            --device-height: 844px;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f5;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+        
+        #root {
+            width: var(--device-width);
+            height: var(--device-height);
+            overflow: hidden;
+            position: relative;
+            background: white;
+        }
+        
+        @media (max-width: 390px) {
+            #root {
+                width: 100%;
+                height: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>
