@@ -10,6 +10,7 @@ import {
   Dimensions,
   Platform,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { useMutation } from '@tanstack/react-query';
@@ -22,6 +23,7 @@ const { width } = Dimensions.get('window');
 export default function VirtualStagingScreen() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedFurniture, setSelectedFurniture] = useState<FurnitureItem | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [detectedObjects, setDetectedObjects] = useState<Array<{
     label: string;
     confidence: number;
@@ -55,30 +57,70 @@ export default function VirtualStagingScreen() {
     onSuccess: (objects) => {
       setDetectedObjects(objects);
     },
+    onError: (error) => {
+      Alert.alert('Error', 'Failed to detect objects in the image. Please try again.');
+    },
   });
 
   const handleImagePick = async (useCamera: boolean) => {
-    const options = {
-      mediaType: 'photo' as const,
-      includeBase64: true,
-    };
-
     try {
+      setIsLoading(true);
+      const options = {
+        mediaType: 'photo' as const,
+        includeBase64: true,
+        quality: 0.8,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      };
+
       const result = useCamera 
         ? await launchCamera(options)
         : await launchImageLibrary(options);
 
-      if (result.assets && result.assets[0]) {
-        const uri = result.assets[0].uri;
-        if (uri) {
-          setUploadedImage(uri);
-          detectObjectsMutation.mutate(uri);
-        }
+      if (result.didCancel) {
+        return;
+      }
+
+      if (result.errorCode) {
+        Alert.alert('Error', result.errorMessage || 'Failed to capture image');
+        return;
+      }
+
+      if (result.assets && result.assets[0]?.uri) {
+        setUploadedImage(result.assets[0].uri);
+        detectObjectsMutation.mutate(result.assets[0].uri);
       }
     } catch (error) {
+      Alert.alert(
+        'Error',
+        'Failed to access ' + (useCamera ? 'camera' : 'photo library')
+      );
       console.error('Error picking image:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const renderButtons = () => (
+    <View style={styles.buttonContainer}>
+      <TouchableOpacity
+        style={[styles.button, styles.galleryButton]}
+        onPress={() => handleImagePick(false)}
+        activeOpacity={0.7}
+        disabled={isLoading}
+      >
+        <Text style={styles.buttonText}>Choose from Gallery</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.button, styles.cameraButton]}
+        onPress={() => handleImagePick(true)}
+        activeOpacity={0.7}
+        disabled={isLoading}
+      >
+        <Text style={styles.buttonText}>Take Photo</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaContext style={styles.safeArea}>
@@ -90,22 +132,7 @@ export default function VirtualStagingScreen() {
       >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upload Room Photo</Text>
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.galleryButton]}
-              onPress={() => handleImagePick(false)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.buttonText}>Choose from Gallery</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.cameraButton]}
-              onPress={() => handleImagePick(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.buttonText}>Take Photo</Text>
-            </TouchableOpacity>
-          </View>
+          {renderButtons()}
 
           {uploadedImage && (
             <View style={styles.imageContainer}>
@@ -117,10 +144,12 @@ export default function VirtualStagingScreen() {
             </View>
           )}
 
-          {detectObjectsMutation.isPending && (
+          {(detectObjectsMutation.isPending || isLoading) && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#3b82f6" />
-              <Text style={styles.loadingText}>Detecting furniture...</Text>
+              <Text style={styles.loadingText}>
+                {detectObjectsMutation.isPending ? 'Detecting furniture...' : 'Processing...'}
+              </Text>
             </View>
           )}
         </View>
