@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { FURNITURE_REPOSITORY, FurnitureType } from '../../client/src/constants/furniture-repository';
 
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = (width - 48) / 2; // 2 columns with padding
+const ITEM_MARGIN = 8;
 
 const FURNITURE_CATEGORIES = [
   { id: "couch" as FurnitureType, label: "Couches" },
@@ -40,7 +42,7 @@ export default function FurnitureCollection({
   selectedItemId,
   detectedObjects = [],
 }: FurnitureCollectionProps) {
-  const [selectedCategory, setSelectedCategory] = React.useState<FurnitureType>("couch");
+  const [selectedCategory, setSelectedCategory] = useState<FurnitureType>("couch");
 
   const getMatchingObjects = (category: string) => {
     return detectedObjects.filter(obj => {
@@ -65,12 +67,12 @@ export default function FurnitureCollection({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.categoryList}
+        contentContainerStyle={styles.categoryList}
       >
         {FURNITURE_CATEGORIES.map(category => {
           const matchingCount = getMatchingObjects(category.id).length;
           const isSelected = category.id === selectedCategory;
-          
+
           return (
             <TouchableOpacity
               key={category.id}
@@ -79,20 +81,24 @@ export default function FurnitureCollection({
                 isSelected && styles.selectedCategory,
               ]}
               onPress={() => setSelectedCategory(category.id)}
+              activeOpacity={0.7}
             >
               <Text style={[
                 styles.categoryText,
                 isSelected && styles.selectedCategoryText,
               ]}>
                 {category.label}
-                {matchingCount > 0 && ` (${matchingCount})`}
+                {matchingCount > 0 ? ` (${matchingCount})` : ''}
               </Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
 
-      <ScrollView style={styles.itemsContainer}>
+      <ScrollView 
+        style={styles.itemsContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.grid}>
           {FURNITURE_REPOSITORY[selectedCategory].map((item) => {
             const matchingObjects = getMatchingObjects(selectedCategory);
@@ -106,6 +112,7 @@ export default function FurnitureCollection({
                   isSelected && styles.selectedCard,
                 ]}
                 onPress={() => onSelect(item)}
+                activeOpacity={0.7}
               >
                 <Image
                   source={{ uri: item.image }}
@@ -139,21 +146,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categoryList: {
-    flexGrow: 0,
-    marginBottom: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
   categoryButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    marginRight: 8,
+    marginHorizontal: 4,
     borderRadius: 20,
     backgroundColor: '#f4f4f5',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   selectedCategory: {
     backgroundColor: '#3b82f6',
   },
   categoryText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#666',
   },
@@ -166,19 +184,26 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    padding: 8,
+    paddingHorizontal: 8,
   },
   itemCard: {
     width: ITEM_WIDTH,
+    marginHorizontal: ITEM_MARGIN,
     marginBottom: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   selectedCard: {
     borderWidth: 2,
@@ -186,9 +211,8 @@ const styles = StyleSheet.create({
   },
   itemImage: {
     width: '100%',
-    height: 120,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    height: ITEM_WIDTH * 0.75,
+    backgroundColor: '#f4f4f5',
   },
   badge: {
     position: 'absolute',
@@ -202,17 +226,20 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#fff',
     fontSize: 12,
+    fontWeight: '500',
   },
   itemInfo: {
-    padding: 8,
+    padding: 12,
   },
   itemName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     marginBottom: 4,
+    color: '#18181b',
   },
   itemDescription: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 13,
+    color: '#6b7280',
+    lineHeight: 18,
   },
 });
