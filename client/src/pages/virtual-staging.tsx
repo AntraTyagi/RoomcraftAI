@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "@/components/file-upload";
 import AreaSelector, { type Area } from "@/components/area-selector";
-import FurnitureCollection, { type FurnitureItem } from "@/components/furniture-collection";
+import FurnitureOperation from "@/components/furniture-operation";
 import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
 import DebugPanel from "@/components/debug-panel";
@@ -26,9 +26,11 @@ interface DetectedObject {
 export default function VirtualStaging() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
-  const [selectedFurniture, setSelectedFurniture] = useState<FurnitureItem | null>(null);
   const [stagedImage, setStagedImage] = useState<string | null>(null);
   const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
+  const [operation, setOperation] = useState<"replace" | "remove" | undefined>();
+  const [furnitureType, setFurnitureType] = useState<string | undefined>();
+  const [furnitureStyle, setFurnitureStyle] = useState<string | undefined>();
   const [debugImages, setDebugImages] = useState<{
     input?: string;
     mask?: string;
@@ -106,7 +108,7 @@ export default function VirtualStaging() {
 
   const stagingMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedAreas.length || !selectedFurniture || !uploadedImage) {
+      if (!selectedAreas.length || !operation || !uploadedImage) {
         throw new Error("Missing required data for staging");
       }
 
@@ -218,13 +220,40 @@ export default function VirtualStaging() {
                Math.abs(objCenterY - areaCenterY) < 50;
       });
 
+      let prompt = '';
+      if (operation === "remove") {
+        prompt = `Remove the furniture in the masked area completely. 
+          Fill the space naturally with flooring, walls, or appropriate background elements that match the room's style.
+          Ensure seamless integration with the surrounding area.
+          Requirements:
+          - 8k resolution
+          - Professional interior photography quality
+          - Perfect lighting and shadows
+          - Ultra realistic materials
+          - Natural integration with surroundings`;
+      } else if (operation === "replace" && furnitureType && furnitureStyle) {
+        prompt = `Replace the masked area with ${furnitureStyle} style ${furnitureType}. 
+          The furniture style should be ${furnitureStyle} with high-end materials and craftsmanship.
+          Maintain the exact same position, scale, and perspective as the furniture in the original image.
+          Match the room's lighting conditions, shadows, and ambient light reflections.
+          Ensure photorealistic rendering with detailed materials and textures.
+          Requirements:
+          - 8k resolution
+          - Professional interior photography quality
+          - Perfect lighting and shadows
+          - Ultra realistic materials
+          - Natural integration with surroundings
+
+          The new furniture should seamlessly blend with the room's existing aesthetic and appear as if it was originally photographed in place.`;
+      }
+
       const response = await fetch("/api/inpaint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image: uploadedImage.split(',')[1],
           mask: maskBase64,
-          furniture: selectedFurniture,
+          prompt,
           detectedObject: matchingObject
         }),
       });
@@ -246,7 +275,7 @@ export default function VirtualStaging() {
       setStagedImage(data.inpaintedImage);
       toast({
         title: "Success",
-        description: "Furniture replacement completed successfully",
+        description: `Furniture ${operation === "remove" ? "removal" : "replacement"} completed successfully`,
       });
     },
     onError: (error: Error) => {
@@ -280,16 +309,25 @@ export default function VirtualStaging() {
     if (selectedAreas.length === 0) {
       toast({
         title: "Error",
-        description: "Please select at least one area to replace",
+        description: "Please select at least one area to modify",
         variant: "destructive",
       });
       return;
     }
 
-    if (!selectedFurniture) {
+    if (!operation) {
       toast({
         title: "Error",
-        description: "Please select a furniture item",
+        description: "Please select an operation (replace or remove)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (operation === "replace" && (!furnitureType || !furnitureStyle)) {
+      toast({
+        title: "Error",
+        description: "Please select both furniture type and style",
         variant: "destructive",
       });
       return;
@@ -317,7 +355,7 @@ export default function VirtualStaging() {
 
           {uploadedImage && (
             <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">2. Select Areas to Replace</h2>
+              <h2 className="text-xl font-semibold mb-4">2. Select Area to Modify</h2>
               <AreaSelector
                 image={uploadedImage}
                 onAreaSelect={setSelectedAreas}
@@ -333,14 +371,14 @@ export default function VirtualStaging() {
           )}
 
           {selectedAreas.length > 0 && (
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">3. Choose Furniture</h2>
-              <FurnitureCollection
-                onSelect={setSelectedFurniture}
-                selectedItemId={selectedFurniture?.id}
-                detectedObjects={detectedObjects}
-              />
-            </Card>
+            <FurnitureOperation
+              onOperationSelect={setOperation}
+              onFurnitureTypeSelect={setFurnitureType}
+              onStyleSelect={setFurnitureStyle}
+              selectedOperation={operation}
+              selectedFurnitureType={furnitureType}
+              selectedStyle={furnitureStyle}
+            />
           )}
 
           <Button
@@ -373,7 +411,7 @@ export default function VirtualStaging() {
                   alt="Original room"
                   className="w-full h-full object-cover rounded-lg"
                 />
-                {selectedFurniture && selectedAreas.map((area, index) => (
+                {operation && selectedAreas.map((area, index) => (
                   <div
                     key={index}
                     className="absolute bg-primary/20 border-2 border-primary"
@@ -385,7 +423,7 @@ export default function VirtualStaging() {
                     }}
                   >
                     <div className="absolute top-2 left-2 bg-background/80 px-2 py-1 rounded text-xs">
-                      {selectedFurniture.name}
+                      {operation === "remove" ? "Remove" : `Replace with ${furnitureType}`}
                     </div>
                   </div>
                 ))}

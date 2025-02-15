@@ -37,18 +37,13 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/inpaint", async (req, res) => {
     try {
-      const { image, mask, furniture, detectedObject } = req.body;
+      const { image, mask, prompt, detectedObject } = req.body;
 
-      if (!image || !mask || !furniture) {
+      if (!image || !mask || !prompt) {
         return res.status(400).json({
-          message: "Image, mask, and furniture details are required",
+          message: "Image, mask, and prompt are required",
         });
       }
-
-      // Generate the enhanced prompt using the furniture details
-      console.log("Generating inpainting prompt for:", furniture.name);
-      const prompt = await generateInpaintingPrompt(furniture, detectedObject);
-      console.log("Generated prompt:", prompt);
 
       const inpaintedImage = await inpaintFurniture(image, mask, prompt);
       res.json({ inpaintedImage });
