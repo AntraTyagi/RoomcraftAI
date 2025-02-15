@@ -35,6 +35,7 @@ export default function VirtualStaging() {
     input?: string;
     mask?: string;
     visualization?: string;
+    prompt?: string;
   }>({});
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -247,6 +248,8 @@ export default function VirtualStaging() {
           The new furniture should seamlessly blend with the room's existing aesthetic and appear as if it was originally photographed in place.`;
       }
 
+      setDebugImages(prev => ({ ...prev, prompt }));
+
       const response = await fetch("/api/inpaint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -442,6 +445,7 @@ export default function VirtualStaging() {
         inputImage={debugImages.input}
         maskImage={debugImages.mask}
         visualizationImage={debugImages.visualization}
+        prompt={debugImages.prompt}
       />
     </div>
   );
