@@ -8,6 +8,7 @@ import Generate from "@/pages/generate";
 import AuthPage from "@/pages/auth-page";
 import VirtualStaging from "@/pages/virtual-staging";
 import Layout from "@/components/layout";
+import { AuthProvider } from "@/hooks/use-auth";
 
 function Router() {
   return (
@@ -26,8 +27,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <AuthProvider>
+        <Router />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

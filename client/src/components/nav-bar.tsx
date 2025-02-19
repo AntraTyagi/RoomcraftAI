@@ -1,11 +1,11 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { useUser } from "@/hooks/use-user";
+import { useAuth } from "@/hooks/use-auth";
 import { useCredits } from "@/hooks/use-credits";
 import { Loader2, Coins } from "lucide-react";
 
 export default function NavBar() {
-  const { user, logout } = useUser();
+  const { user, logoutMutation } = useAuth();
   const { balance, isLoading } = useCredits();
 
   return (
@@ -30,7 +30,14 @@ export default function NavBar() {
                   )}
                 </div>
               </div>
-              <Button variant="ghost" onClick={() => logout()}>
+              <Button 
+                variant="ghost" 
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+              >
+                {logoutMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
                 Logout
               </Button>
             </>
