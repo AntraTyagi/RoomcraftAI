@@ -8,6 +8,10 @@ import { promisify } from "util";
 import { users, insertUserSchema, type SelectUser } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
+import type { Express } from "express";
+import { User } from "./models/User";
+import { generateToken } from "./middleware/auth";
+import { body, validationResult } from "express-validator";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -31,7 +35,7 @@ const crypto = {
 // extend express user object with our schema
 declare global {
   namespace Express {
-    interface User extends SelectUser { }
+    interface User extends SelectUser {}
   }
 }
 
@@ -98,85 +102,103 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const result = insertUserSchema.safeParse(req.body);
-      if (!result.success) {
-        return res
-          .status(400)
-          .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
-      }
-
-      const { username, password } = result.data;
-
-      // Check if user already exists
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
-
-      if (existingUser) {
-        return res.status(400).send("Username already exists");
-      }
-
-      // Hash the password
-      const hashedPassword = await crypto.hash(password);
-
-      // Create the new user
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          ...result.data,
-          password: hashedPassword,
-        })
-        .returning();
-
-      // Log the user in after registration
-      req.login(newUser, (err) => {
-        if (err) {
-          return next(err);
-        }
-        return res.json({
-          message: "Registration successful",
-          user: { id: newUser.id, username: newUser.username },
-        });
-      });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.post("/api/login", (req, res, next) => {
-    const result = insertUserSchema.safeParse(req.body);
-    if (!result.success) {
-      return res
-        .status(400)
-        .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
-    }
-
-    const cb = (err: any, user: Express.User, info: IVerifyOptions) => {
-      if (err) {
-        return next(err);
-      }
-
-      if (!user) {
-        return res.status(400).send(info.message ?? "Login failed");
-      }
-
-      req.logIn(user, (err) => {
-        if (err) {
-          return next(err);
+  // Register new user
+  app.post(
+    "/api/register",
+    [
+      body("email").isEmail(),
+      body("password").isLength({ min: 6 }),
+      body("name").notEmpty(),
+    ],
+    async (req, res) => {
+      try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+          return res.status(400).json({ errors: errors.array() });
         }
 
-        return res.json({
-          message: "Login successful",
-          user: { id: user.id, username: user.username },
+        const { email, password, name } = req.body;
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+          return res.status(400).json({ message: "User already exists" });
+        }
+
+        // Create new user
+        const user = new User({
+          email,
+          password, // Will be hashed by the pre-save hook
+          name,
+          credits: 10, // Initial free credits
         });
-      });
-    };
-    passport.authenticate("local", cb)(req, res, next);
-  });
+
+        await user.save();
+        console.log("New user created:", user._id);
+
+        // Generate token
+        const token = generateToken(user);
+
+        res.status(201).json({
+          message: "User created successfully",
+          user: {
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            credits: user.credits,
+          },
+          token,
+        });
+      } catch (error) {
+        console.error("Registration error:", error);
+        res.status(500).json({ message: "Error creating user" });
+      }
+    }
+  );
+
+  // Login user
+  app.post(
+    "/api/login",
+    [body("email").isEmail(), body("password").exists()],
+    async (req, res) => {
+      try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+          return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { email, password } = req.body;
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+          return res.status(401).json({ message: "Invalid credentials" });
+        }
+
+        // Check password
+        const isValidPassword = await user.comparePassword(password);
+        if (!isValidPassword) {
+          return res.status(401).json({ message: "Invalid credentials" });
+        }
+
+        // Generate token
+        const token = generateToken(user);
+
+        res.json({
+          user: {
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            credits: user.credits,
+          },
+          token,
+        });
+      } catch (error) {
+        console.error("Login error:", error);
+        res.status(500).json({ message: "Error logging in" });
+      }
+    }
+  );
 
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {

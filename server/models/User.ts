@@ -30,14 +30,21 @@ const userSchema = new mongoose.Schema({
 // Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-  
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+    console.log(`Creating new user with email: ${this.email}`); // Debug log
     next();
   } catch (error) {
+    console.error('Error hashing password:', error);
     next(error as Error);
   }
+});
+
+// Log after successful save
+userSchema.post('save', function(doc) {
+  console.log('User saved successfully:', doc._id);
 });
 
 // Compare password method
