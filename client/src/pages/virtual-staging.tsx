@@ -27,10 +27,10 @@ export default function VirtualStaging() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedAreas, setSelectedAreas] = useState<Area[]>([]);
   const [stagedImage, setStagedImage] = useState<string | null>(null);
-  const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
   const [operation, setOperation] = useState<"replace" | "remove" | undefined>();
   const [furnitureType, setFurnitureType] = useState<string | undefined>();
   const [furnitureStyle, setFurnitureStyle] = useState<string | undefined>();
+  const [furnitureColor, setFurnitureColor] = useState<string | undefined>();
   const [debugImages, setDebugImages] = useState<{
     input?: string;
     mask?: string;
@@ -39,73 +39,6 @@ export default function VirtualStaging() {
   }>({});
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const detectObjectsMutation = useMutation({
-    mutationFn: async (params: { image: string; query?: string }) => {
-      const base64Image = params.image;
-
-      const response = await fetch("/api/detect-objects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image: base64Image,
-          query: DEFAULT_FURNITURE_QUERY
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to detect objects");
-      }
-
-      const data = await response.json();
-      return data.objects;
-    },
-    onSuccess: (objects) => {
-      setDetectedObjects(objects);
-      const furnitureObjects = objects.filter(obj =>
-        [
-          'table', 'dining table', 'coffee table', 'side table', 'center table', 'console table',
-          'chair', 'accent chair', 'dining chair', 'office chair', 'bar stool',
-          'sofa', 'couch', 'sectional sofa', 'loveseat',
-          'tv console', 'tv stand', 'entertainment center',
-          'refrigerator', 'fridge',
-          'kitchen counter', 'kitchen cabinet', 'kitchen island',
-          'bar stools', 'counter stools',
-          'indoor plants', 'potted plants',
-          'wall art', 'paintings, artwork',
-          'curtains', 'window treatments',
-          'bookshelf', 'shelving unit',
-          'bed', 'headboard',
-          'dresser', 'wardrobe', 'chest of drawers',
-          'desk', 'work table',
-          'ottoman', 'footstool',
-          'cabinet', 'storage unit'
-        ].includes(obj.label.toLowerCase())
-      );
-
-      const areas = furnitureObjects.map((obj, index) => ({
-        id: `detected-${index}`,
-        x: obj.box.x1,
-        y: obj.box.y1,
-        width: obj.box.x2 - obj.box.x1,
-        height: obj.box.y2 - obj.box.y1,
-        label: obj.label
-      }));
-
-      setSelectedAreas(areas);
-      toast({
-        title: "Detection Complete",
-        description: `Found ${areas.length} furniture items in the image.`,
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to detect objects in the image. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
 
   const stagingMutation = useMutation({
     mutationFn: async () => {
@@ -154,73 +87,6 @@ export default function VirtualStaging() {
 
       const maskBase64 = canvas.toDataURL('image/png').split(',')[1];
 
-      const debugInputCanvas = document.createElement('canvas');
-      debugInputCanvas.width = img.width;
-      debugInputCanvas.height = img.height;
-      const debugInputCtx = debugInputCanvas.getContext('2d');
-      if (debugInputCtx) {
-        debugInputCtx.drawImage(img, 0, 0);
-        const inputImageUrl = debugInputCanvas.toDataURL('image/png');
-        setDebugImages(prev => ({ ...prev, input: inputImageUrl }));
-      }
-
-      const debugMaskCanvas = document.createElement('canvas');
-      debugMaskCanvas.width = img.width;
-      debugMaskCanvas.height = img.height;
-      const debugMaskCtx = debugMaskCanvas.getContext('2d');
-      if (debugMaskCtx) {
-        debugMaskCtx.fillStyle = 'black';
-        debugMaskCtx.fillRect(0, 0, debugMaskCanvas.width, debugMaskCanvas.height);
-
-        debugMaskCtx.fillStyle = 'white';
-        selectedAreas.forEach(area => {
-          const scaleX = img.width / containerRect.width;
-          const scaleY = img.height / containerRect.height;
-
-          const x = area.x * scaleX;
-          const y = area.y * scaleY;
-          const width = area.width * scaleX;
-          const height = area.height * scaleY;
-
-          debugMaskCtx.fillRect(x, y, width, height);
-        });
-        const maskImageUrl = debugMaskCanvas.toDataURL('image/png');
-        setDebugImages(prev => ({ ...prev, mask: maskImageUrl }));
-      }
-
-      const debugVisCanvas = document.createElement('canvas');
-      debugVisCanvas.width = img.width;
-      debugVisCanvas.height = img.height;
-      const debugVisCtx = debugVisCanvas.getContext('2d');
-      if (debugVisCtx) {
-        debugVisCtx.drawImage(img, 0, 0);
-        debugVisCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-        selectedAreas.forEach(area => {
-          const scaleX = img.width / containerRect.width;
-          const scaleY = img.height / containerRect.height;
-
-          const x = area.x * scaleX;
-          const y = area.y * scaleY;
-          const width = area.width * scaleX;
-          const height = area.height * scaleY;
-
-          debugVisCtx.fillRect(x, y, width, height);
-        });
-        const visualizationUrl = debugVisCanvas.toDataURL('image/png');
-        setDebugImages(prev => ({ ...prev, visualization: visualizationUrl }));
-      }
-
-      const matchingObject = detectedObjects.find(obj => {
-        const selectedArea = selectedAreas[0];
-        const objCenterX = (obj.box.x1 + obj.box.x2) / 2;
-        const objCenterY = (obj.box.y1 + obj.box.y2) / 2;
-        const areaCenterX = selectedArea.x + selectedArea.width / 2;
-        const areaCenterY = selectedArea.y + selectedArea.height / 2;
-
-        return Math.abs(objCenterX - areaCenterX) < 50 &&
-               Math.abs(objCenterY - areaCenterY) < 50;
-      });
-
       let prompt = '';
       if (operation === "remove") {
         prompt = `Remove the furniture in the masked area completely. 
@@ -233,7 +99,7 @@ export default function VirtualStaging() {
           - Ultra realistic materials
           - Natural integration with surroundings`;
       } else if (operation === "replace" && furnitureType && furnitureStyle) {
-        prompt = `Replace the masked area with ${furnitureStyle} style ${furnitureType}. 
+        prompt = `Replace the masked area with a ${furnitureColor || ''} ${furnitureStyle} style ${furnitureType}. 
           The furniture style should be ${furnitureStyle} with high-end materials and craftsmanship.
           Maintain the exact same position, scale, and perspective as the furniture in the original image.
           Match the room's lighting conditions, shadows, and ambient light reflections.
@@ -257,7 +123,6 @@ export default function VirtualStaging() {
           image: uploadedImage.split(',')[1],
           mask: maskBase64,
           prompt,
-          detectedObject: matchingObject
         }),
       });
 
@@ -293,10 +158,6 @@ export default function VirtualStaging() {
 
   const handleImageUpload = (image: string) => {
     setUploadedImage(image);
-    detectObjectsMutation.mutate({
-      image,
-      query: DEFAULT_FURNITURE_QUERY
-    });
   };
 
   const handleGenerate = () => {
@@ -348,12 +209,6 @@ export default function VirtualStaging() {
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">1. Upload Room Photo</h2>
             <FileUpload onUpload={handleImageUpload} />
-            {detectObjectsMutation.isPending && (
-              <div className="mt-4 flex items-center justify-center text-sm text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Detecting furniture...
-              </div>
-            )}
           </Card>
 
           {uploadedImage && (
@@ -363,13 +218,6 @@ export default function VirtualStaging() {
                 image={uploadedImage}
                 onAreaSelect={setSelectedAreas}
               />
-              {detectedObjects.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Detected furniture items: {detectedObjects.map(obj => obj.label).join(', ')}
-                  </p>
-                </div>
-              )}
             </Card>
           )}
 
@@ -378,9 +226,11 @@ export default function VirtualStaging() {
               onOperationSelect={setOperation}
               onFurnitureTypeSelect={setFurnitureType}
               onStyleSelect={setFurnitureStyle}
+              onColorSelect={setFurnitureColor}
               selectedOperation={operation}
               selectedFurnitureType={furnitureType}
               selectedStyle={furnitureStyle}
+              selectedColor={furnitureColor}
             />
           )}
 
