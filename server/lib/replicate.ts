@@ -1,3 +1,5 @@
+import fetch from "node-fetch";
+
 const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
 export async function generateDesign(
@@ -39,10 +41,12 @@ export async function generateDesign(
         input: {
           prompt: designPrompt,
           image: imageUrl,
-          num_outputs: 4,
-          guidance_scale: 7.5,
-          num_inference_steps: 50,
-          scheduler: "K_EULER_ANCESTRAL",
+          num_outputs: 2, // Reduced from 4 to 2
+          guidance_scale: 7.0, // Slightly reduced from 7.5
+          num_inference_steps: 30, // Reduced from 50
+          scheduler: "K_EULER", // Changed from K_EULER_ANCESTRAL for better memory usage
+          width: 768,  // Reduced dimensions
+          height: 768,
         },
       }),
     });
