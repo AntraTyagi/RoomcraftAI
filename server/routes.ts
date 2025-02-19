@@ -4,6 +4,7 @@ import { generateDesign } from "./lib/replicate";
 import { setupAuth } from "./auth";
 import { inpaintFurniture } from "./lib/replicate-inpainting";
 import { User } from "./models/User";
+import { CreditHistory } from "./models/CreditHistory";
 import { authMiddleware, type AuthRequest } from "./middleware/auth";
 import { connectDB } from "./lib/mongodb";
 
@@ -41,7 +42,44 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
-  // Protected route with credit check
+  // Get credit history
+  app.get("/api/credits/history", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const history = await CreditHistory.find({ userId: req.user.id })
+        .sort({ timestamp: -1 })
+        .limit(50);
+
+      res.json({ history });
+    } catch (error) {
+      console.error("Error fetching credit history:", error);
+      res.status(500).json({ message: "Error fetching credit history" });
+    }
+  });
+
+  // Get current credit balance
+  app.get("/api/credits/balance", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const user = await User.findById(req.user.id).select('credits');
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ credits: user.credits });
+    } catch (error) {
+      console.error("Error fetching credit balance:", error);
+      res.status(500).json({ message: "Error fetching credit balance" });
+    }
+  });
+
+  // Protected route with credit check for inpainting
   app.post("/api/inpaint", authMiddleware, checkCredits, async (req: AuthRequest, res) => {
     try {
       const { image, mask, prompt } = req.body;
@@ -54,8 +92,16 @@ export function registerRoutes(app: Express): Server {
 
       const inpaintedImage = await inpaintFurniture(image, mask, prompt);
 
-      // Deduct credit after successful operation
+      // Record credit usage
       if (req.user) {
+        await CreditHistory.create({
+          userId: req.user.id,
+          operationType: 'inpaint',
+          description: 'Inpainting operation',
+          creditsUsed: 1
+        });
+
+        // Deduct credit after successful operation
         await User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } });
       }
 
@@ -68,7 +114,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Protected route with credit check
+  // Protected route with credit check for generation
   app.post("/api/generate", authMiddleware, checkCredits, async (req: AuthRequest, res) => {
     try {
       const { image, style, roomType, colorTheme, prompt } = req.body;
@@ -81,8 +127,16 @@ export function registerRoutes(app: Express): Server {
 
       const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
 
-      // Deduct credit after successful operation
+      // Record credit usage
       if (req.user) {
+        await CreditHistory.create({
+          userId: req.user.id,
+          operationType: 'generate',
+          description: 'Design generation',
+          creditsUsed: 1
+        });
+
+        // Deduct credit after successful operation
         await User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } });
       }
 
