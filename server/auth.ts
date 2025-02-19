@@ -8,36 +8,11 @@ import { promisify } from "util";
 import { users, insertUserSchema, type SelectUser } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
-import type { Express } from "express";
 import { User } from "./models/User";
 import { generateToken } from "./middleware/auth";
 import { body, validationResult } from "express-validator";
 
 const scryptAsync = promisify(scrypt);
-const crypto = {
-  hash: async (password: string) => {
-    const salt = randomBytes(16).toString("hex");
-    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
-  },
-  compare: async (suppliedPassword: string, storedPassword: string) => {
-    const [hashedPassword, salt] = storedPassword.split(".");
-    const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
-    const suppliedPasswordBuf = (await scryptAsync(
-      suppliedPassword,
-      salt,
-      64
-    )) as Buffer;
-    return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
-  },
-};
-
-// extend express user object with our schema
-declare global {
-  namespace Express {
-    interface User extends SelectUser {}
-  }
-}
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
@@ -106,9 +81,8 @@ export function setupAuth(app: Express) {
   app.post(
     "/api/register",
     [
-      body("email").isEmail().withMessage("Please provide a valid email address"),
+      body("username").isEmail().withMessage("Please provide a valid email address"),
       body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
-      body("name").trim().notEmpty().withMessage("Name is required"),
     ],
     async (req, res) => {
       try {
@@ -120,26 +94,25 @@ export function setupAuth(app: Express) {
             message: "Validation failed",
             errors: errors.array(),
             expectedFormat: {
-              email: "user@example.com",
-              password: "minimum 6 characters",
-              name: "Your full name"
+              username: "user@example.com",
+              password: "minimum 6 characters"
             }
           });
         }
 
-        const { email, password, name } = req.body;
+        const { username, password } = req.body;
 
         // Check if user already exists
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email: username });
         if (existingUser) {
           return res.status(400).json({ message: "User already exists" });
         }
 
         // Create new user
         const user = new User({
-          email,
+          email: username, // Use username as email
           password, // Will be hashed by the pre-save hook
-          name,
+          name: username.split('@')[0], // Use part before @ as name
           credits: 10, // Initial free credits
         });
 
@@ -169,7 +142,10 @@ export function setupAuth(app: Express) {
   // Login user
   app.post(
     "/api/login",
-    [body("email").isEmail(), body("password").exists()],
+    [
+      body("username").isEmail().withMessage("Please provide a valid email address"),
+      body("password").exists().withMessage("Password is required"),
+    ],
     async (req, res) => {
       try {
         const errors = validationResult(req);
@@ -177,10 +153,10 @@ export function setupAuth(app: Express) {
           return res.status(400).json({ errors: errors.array() });
         }
 
-        const { email, password } = req.body;
+        const { username, password } = req.body;
 
         // Find user
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: username });
         if (!user) {
           return res.status(401).json({ message: "Invalid credentials" });
         }
