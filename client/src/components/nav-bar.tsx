@@ -1,22 +1,35 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/use-user";
+import { useCredits } from "@/hooks/use-credits";
+import { Loader2, Coins } from "lucide-react";
 
 export default function NavBar() {
   const { user, logout } = useUser();
+  const { balance, isLoading } = useCredits();
 
   return (
     <nav className="border-b">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/">
-          <a className="text-2xl font-bold">RoomcraftAI</a>
+          <span className="text-2xl font-bold">RoomcraftAI</span>
         </Link>
         <div className="flex items-center gap-4">
           {user ? (
             <>
-              <span className="text-sm text-muted-foreground">
-                Welcome, {user.username}
-              </span>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  Welcome, {user.username}
+                </span>
+                <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-full">
+                  <Coins className="w-4 h-4 text-primary" />
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <span className="font-medium">{balance} credits</span>
+                  )}
+                </div>
+              </div>
               <Button variant="ghost" onClick={() => logout()}>
                 Logout
               </Button>
