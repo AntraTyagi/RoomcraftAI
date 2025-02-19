@@ -1,18 +1,11 @@
 import passport from "passport";
-import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
+import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
-import { users, insertUserSchema, type SelectUser } from "@db/schema";
-import { db } from "@db";
-import { eq } from "drizzle-orm";
 import { User } from "./models/User";
 import { generateToken } from "./middleware/auth";
 import { body, validationResult } from "express-validator";
-
-const scryptAsync = promisify(scrypt);
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
@@ -40,38 +33,42 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.username, username))
-          .limit(1);
-
+        const user = await User.findOne({ email: username });
         if (!user) {
           return done(null, false, { message: "Incorrect username." });
         }
-        const isMatch = await crypto.compare(password, user.password);
+
+        const isMatch = await user.comparePassword(password);
         if (!isMatch) {
           return done(null, false, { message: "Incorrect password." });
         }
-        return done(null, user);
+
+        return done(null, {
+          id: user._id.toString(),
+          email: user.email,
+          name: user.name,
+        });
       } catch (err) {
         return done(err);
       }
     })
   );
 
-  passport.serializeUser((user, done) => {
+  passport.serializeUser((user: any, done) => {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: string, done) => {
     try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-      done(null, user);
+      const user = await User.findById(id);
+      if (!user) {
+        return done(null, false);
+      }
+      done(null, {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+      });
     } catch (err) {
       done(err);
     }
@@ -86,8 +83,6 @@ export function setupAuth(app: Express) {
     ],
     async (req, res) => {
       try {
-        console.log("Registration request body:", req.body); // Debug log
-
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
           return res.status(400).json({ 
@@ -110,22 +105,25 @@ export function setupAuth(app: Express) {
 
         // Create new user
         const user = new User({
-          email: username, // Use username as email
-          password, // Will be hashed by the pre-save hook
-          name: username.split('@')[0], // Use part before @ as name
-          credits: 10, // Initial free credits
+          email: username,
+          password,
+          name: username.split('@')[0],
+          credits: 10,
         });
 
         await user.save();
         console.log("New user created:", user._id);
 
-        // Generate token
-        const token = generateToken(user);
+        const token = generateToken({
+          _id: user._id.toString(),
+          email: user.email,
+          name: user.name,
+        });
 
         res.status(201).json({
           message: "User created successfully",
           user: {
-            id: user._id,
+            id: user._id.toString(),
             email: user.email,
             name: user.name,
             credits: user.credits,
@@ -168,11 +166,15 @@ export function setupAuth(app: Express) {
         }
 
         // Generate token
-        const token = generateToken(user);
+        const token = generateToken({
+          _id: user._id.toString(),
+          email: user.email,
+          name: user.name,
+        });
 
         res.json({
           user: {
-            id: user._id,
+            id: user._id.toString(),
             email: user.email,
             name: user.name,
             credits: user.credits,
@@ -191,16 +193,14 @@ export function setupAuth(app: Express) {
       if (err) {
         return res.status(500).send("Logout failed");
       }
-
       res.json({ message: "Logout successful" });
     });
   });
 
   app.get("/api/user", (req, res) => {
-    if (req.isAuthenticated()) {
-      return res.json(req.user);
+    if (!req.user) {
+      return res.status(401).send("Not logged in");
     }
-
-    res.status(401).send("Not logged in");
+    res.json(req.user);
   });
 }
