@@ -10,7 +10,7 @@ import DesignGallery from "@/components/design-gallery";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { COLOR_THEMES } from "@/constants/color-themes";
+import { COLOR_THEMES, type ColorTheme } from "@/constants/color-themes";
 import { Badge } from "@/components/ui/badge";
 
 export default function Generate() {
@@ -125,18 +125,37 @@ export default function Generate() {
             <Card
               key={theme.name}
               className={cn(
-                "cursor-pointer p-4 transition-all hover:border-primary",
+                "cursor-pointer p-4 transition-all hover:border-primary relative overflow-hidden",
                 selectedTheme === theme.name && "ring-2 ring-primary"
               )}
               onClick={() => setSelectedTheme(theme.name)}
             >
-              <h4 className="font-medium">{theme.name}</h4>
-              <p className="text-sm text-muted-foreground">{theme.description}</p>
-              {selectedTheme === theme.name && (
-                <Badge className="absolute top-2 right-2" variant="secondary">
-                  Selected
-                </Badge>
-              )}
+              <div className="flex flex-col h-full">
+                <div
+                  className="w-full h-16 rounded-md mb-3"
+                  style={{ background: theme.preview }}
+                />
+                <div className="flex gap-2 mb-2 flex-wrap">
+                  {Object.entries(theme.colors).map(([name, color]) => (
+                    <div key={name} className="flex items-center gap-1">
+                      <div
+                        className="w-4 h-4 rounded-full border border-border"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="text-xs capitalize text-muted-foreground">
+                        {name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <h4 className="font-medium">{theme.name}</h4>
+                <p className="text-sm text-muted-foreground">{theme.description}</p>
+                {selectedTheme === theme.name && (
+                  <Badge className="absolute top-2 right-2" variant="secondary">
+                    Selected
+                  </Badge>
+                )}
+              </div>
             </Card>
           ))}
         </div>
