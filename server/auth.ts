@@ -4,8 +4,8 @@ import { type Express } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { User } from "./models/User";
-import { generateToken } from "./middleware/auth";
 import { body, validationResult } from "express-validator";
+import { generateToken } from "./lib/jwt";
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
