@@ -17,11 +17,13 @@ export default function NavBar() {
             <>
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">
-                  Welcome, {user.name || user.username}
+                  Welcome, {user.username}
                 </span>
                 <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-full">
                   <Coins className="w-4 h-4 text-primary" />
-                  <span className="font-medium">{user.credits} credits</span>
+                  <span className="font-medium">
+                    {user.credits ?? 0} credits
+                  </span>
                 </div>
               </div>
               <Button 
