@@ -28,9 +28,10 @@ export async function apiRequest(
 
   if (!response.ok) {
     if (response.status === 401) {
-      localStorage.removeItem("auth_token"); // Clear invalid token
+      localStorage.removeItem("auth_token");
     }
-    throw new Error(await response.text());
+    const errorText = await response.text();
+    throw new Error(errorText || response.statusText);
   }
 
   return response;
@@ -42,7 +43,7 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
       "Content-Type": "application/json"
     };
 
-    // Add auth token if available
+    // Add auth token if available with Bearer prefix
     const token = localStorage.getItem("auth_token");
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -55,7 +56,7 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
         if (options.on401 === "returnNull") {
           return null;
         }
-        localStorage.removeItem("auth_token"); // Clear invalid token
+        localStorage.removeItem("auth_token");
       }
       throw new Error(await res.text());
     }
