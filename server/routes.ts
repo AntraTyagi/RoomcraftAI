@@ -194,12 +194,24 @@ export function registerRoutes(app: Express): Server {
   // Get user profile and credits
   app.get("/api/user", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const user = await User.findById(req.user?.id).select('-password');
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const user = await User.findById(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.json(user);
+
+      res.json({
+        id: user._id.toString(),
+        email: user.email,
+        username: user.email,
+        name: user.name,
+        credits: user.credits,
+      });
     } catch (error) {
+      console.error("Error fetching user profile:", error);
       res.status(500).json({ message: "Error fetching user profile" });
     }
   });
