@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { verifyToken } from '../lib/jwt';
 import { User } from '../models/User';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export interface UserPayload {
   id: string;
@@ -22,10 +20,10 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
+    const decoded = verifyToken(token);
 
     // Verify user exists in database
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded._id);
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }

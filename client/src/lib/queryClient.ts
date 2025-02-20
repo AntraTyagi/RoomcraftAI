@@ -13,6 +13,7 @@ export async function apiRequest(
     "Content-Type": "application/json",
   };
 
+  // Add auth token if available
   const token = localStorage.getItem("auth_token");
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -22,10 +23,12 @@ export async function apiRequest(
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
-    credentials: "include",
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem("auth_token"); // Clear invalid token
+    }
     throw new Error(await response.text());
   }
 
@@ -33,21 +36,23 @@ export async function apiRequest(
 }
 
 export function getQueryFn(options: GetQueryFnOptions = {}) {
-  return async ({ queryKey }: { queryKey: string[] }) => {
+  return async ({ queryKey }: { queryKey: (string | Record<string, any>)[] }) => {
     const headers: Record<string, string> = {};
+
+    // Add auth token if available
     const token = localStorage.getItem("auth_token");
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(queryKey[0] as string, {
-      headers,
-      credentials: "include",
-    });
+    const res = await fetch(queryKey[0] as string, { headers });
 
     if (!res.ok) {
-      if (res.status === 401 && options.on401 === "returnNull") {
-        return null;
+      if (res.status === 401) {
+        if (options.on401 === "returnNull") {
+          return null;
+        }
+        localStorage.removeItem("auth_token"); // Clear invalid token
       }
       throw new Error(await res.text());
     }

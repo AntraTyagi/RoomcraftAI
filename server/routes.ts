@@ -7,6 +7,7 @@ import { User } from "./models/User";
 import { CreditHistory } from "./models/CreditHistory";
 import { authMiddleware, type AuthRequest } from "./middleware/auth";
 import { connectDB } from "./lib/mongodb";
+import { generateToken } from "./lib/jwt"; // Import generateToken function
 
 export function registerRoutes(app: Express): Server {
   // Connect to MongoDB
@@ -19,6 +20,47 @@ export function registerRoutes(app: Express): Server {
   if (!process.env.REPLICATE_API_KEY) {
     console.error("Warning: REPLICATE_API_KEY environment variable is not set");
   }
+
+  // Login endpoint
+  app.post("/api/login", async (req: AuthRequest, res) => {
+    try {
+      const { username, password } = req.body;
+
+      // Find user
+      const user = await User.findOne({ email: username });
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Check password
+      const isValidPassword = await user.comparePassword(password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Generate token
+      const token = generateToken({
+        _id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+      });
+
+      // Return user data and token
+      res.json({
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          username: user.email,
+          name: user.name,
+          credits: user.credits,
+        },
+        token,
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Error logging in" });
+    }
+  });
 
   // Middleware to check user credits
   const checkCredits = async (req: AuthRequest, res: any, next: any) => {
