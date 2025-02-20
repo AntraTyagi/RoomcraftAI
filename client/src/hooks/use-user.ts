@@ -16,9 +16,11 @@ async function handleRequest(
   try {
     const response = await fetch(url, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: {
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
-      credentials: "include",
+      credentials: "include",  // Ensure cookies are sent with requests
     });
 
     if (!response.ok) {
@@ -38,7 +40,7 @@ async function handleRequest(
 
 async function fetchUser(): Promise<SelectUser | null> {
   const response = await fetch('/api/user', {
-    credentials: 'include'
+    credentials: 'include',  // Ensure cookies are sent with requests
   });
 
   if (!response.ok) {
@@ -62,7 +64,7 @@ export function useUser() {
   const { data: user, error, isLoading } = useQuery<SelectUser | null, Error>({
     queryKey: ['user'],
     queryFn: fetchUser,
-    staleTime: Infinity,
+    staleTime: 0, // Don't cache the user data
     retry: false
   });
 
