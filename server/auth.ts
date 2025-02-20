@@ -15,7 +15,7 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     cookie: {},
     store: new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
+      checkPeriod: 86400000,
     }),
   };
 
@@ -46,7 +46,9 @@ export function setupAuth(app: Express) {
         return done(null, {
           id: user._id.toString(),
           email: user.email,
+          username: user.email,
           name: user.name,
+          credits: user.credits
         });
       } catch (err) {
         return done(err);
@@ -67,77 +69,16 @@ export function setupAuth(app: Express) {
       done(null, {
         id: user._id.toString(),
         email: user.email,
+        username: user.email,
         name: user.name,
+        credits: user.credits
       });
     } catch (err) {
       done(err);
     }
   });
 
-  // Register new user
-  app.post(
-    "/api/register",
-    [
-      body("username").isEmail().withMessage("Please provide a valid email address"),
-      body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
-    ],
-    async (req, res) => {
-      try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-          return res.status(400).json({ 
-            message: "Validation failed",
-            errors: errors.array(),
-            expectedFormat: {
-              username: "user@example.com",
-              password: "minimum 6 characters"
-            }
-          });
-        }
-
-        const { username, password } = req.body;
-
-        // Check if user already exists
-        const existingUser = await User.findOne({ email: username });
-        if (existingUser) {
-          return res.status(400).json({ message: "User already exists" });
-        }
-
-        // Create new user
-        const user = new User({
-          email: username,
-          password,
-          name: username.split('@')[0],
-          credits: 10,
-        });
-
-        await user.save();
-        console.log("New user created:", user._id);
-
-        const token = generateToken({
-          _id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-        });
-
-        res.status(201).json({
-          message: "User created successfully",
-          user: {
-            id: user._id.toString(),
-            email: user.email,
-            name: user.name,
-            credits: user.credits,
-          },
-          token,
-        });
-      } catch (error) {
-        console.error("Registration error:", error);
-        res.status(500).json({ message: "Error creating user" });
-      }
-    }
-  );
-
-  // Login user
+  // Login endpoint
   app.post(
     "/api/login",
     [
@@ -176,6 +117,7 @@ export function setupAuth(app: Express) {
           user: {
             id: user._id.toString(),
             email: user.email,
+            username: user.email,
             name: user.name,
             credits: user.credits,
           },
@@ -201,6 +143,15 @@ export function setupAuth(app: Express) {
     if (!req.user) {
       return res.status(401).send("Not logged in");
     }
-    res.json(req.user);
+
+    // Ensure we're sending back the complete user object with all required fields
+    const user = req.user as any;
+    res.json({
+      id: user.id,
+      email: user.email,
+      username: user.email,
+      name: user.name,
+      credits: user.credits
+    });
   });
 }
