@@ -38,7 +38,9 @@ export async function apiRequest(
 
 export function getQueryFn(options: GetQueryFnOptions = {}) {
   return async ({ queryKey }: { queryKey: QueryKey }) => {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json"
+    };
 
     // Add auth token if available
     const token = localStorage.getItem("auth_token");

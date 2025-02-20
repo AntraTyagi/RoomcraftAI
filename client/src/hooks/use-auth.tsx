@@ -38,6 +38,15 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
+  // Effect to check for token on mount
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      // Force a refetch of user data if we have a token
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    }
+  }, []);
+
   const {
     data: user,
     error,
