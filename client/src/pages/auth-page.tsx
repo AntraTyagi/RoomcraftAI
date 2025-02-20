@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/hooks/use-user";
+import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -28,7 +28,7 @@ type AuthFormData = z.infer<typeof authSchema>;
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { login, register } = useUser();
+  const { loginMutation, registerMutation } = useAuth();
 
   const form = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
@@ -41,14 +41,11 @@ export default function AuthPage() {
   const onSubmit = async (formData: AuthFormData, isLogin: boolean) => {
     setIsLoading(true);
     try {
-      const result = await (isLogin ? login(formData) : register(formData));
-      if (!result.ok) {
-        throw new Error(result.message);
+      if (isLogin) {
+        await loginMutation.mutateAsync(formData);
+      } else {
+        await registerMutation.mutateAsync(formData);
       }
-      toast({
-        title: isLogin ? "Login successful" : "Registration successful",
-        description: "Welcome to RoomcraftAI",
-      });
     } catch (error: any) {
       toast({
         title: "Error",
