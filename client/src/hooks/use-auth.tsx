@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext } from "react";
+import { ReactNode, createContext, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -42,6 +42,16 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+
+  // Effect to check for token on mount
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      // Force a refetch of user data if we have a token
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    }
+  }, []);
+
   const {
     data: user,
     error,
@@ -62,35 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Login successful",
-        description: `Welcome back, ${user.name}!`,
+        description: `Welcome back, ${user.name || user.username}!`,
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Login failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const registerMutation = useMutation({
-    mutationFn: async (newUser: RegisterData) => {
-      const res = await apiRequest("POST", "/api/register", newUser);
-      const data: LoginResponse = await res.json();
-      localStorage.setItem("auth_token", data.token);
-      return data.user;
-    },
-    onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/user"], user);
-      toast({
-        title: "Registration successful",
-        description: `Welcome, ${user.name}!`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Registration failed",
         description: error.message,
         variant: "destructive",
       });
@@ -126,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error,
         loginMutation,
         logoutMutation,
-        registerMutation,
+        registerMutation: loginMutation, // Temporarily use login mutation
       }}
     >
       {children}
