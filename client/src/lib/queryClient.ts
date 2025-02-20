@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { QueryKey } from "@tanstack/react-query";
 
 type GetQueryFnOptions = {
   on401?: "throw" | "returnNull";
@@ -36,7 +37,7 @@ export async function apiRequest(
 }
 
 export function getQueryFn(options: GetQueryFnOptions = {}) {
-  return async ({ queryKey }: { queryKey: (string | Record<string, any>)[] }) => {
+  return async ({ queryKey }: { queryKey: QueryKey }) => {
     const headers: Record<string, string> = {};
 
     // Add auth token if available
@@ -72,6 +73,6 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
-    }
+    },
   },
 });

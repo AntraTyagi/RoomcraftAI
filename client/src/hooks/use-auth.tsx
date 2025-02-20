@@ -20,10 +20,6 @@ interface LoginData {
   password: string;
 }
 
-interface RegisterData extends LoginData {
-  email: string;
-}
-
 interface LoginResponse {
   user: User;
   token: string;
@@ -33,9 +29,8 @@ type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   error: Error | null;
-  loginMutation: UseMutationResult<User, Error, LoginData>;
+  loginMutation: UseMutationResult<LoginResponse, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<User, Error, RegisterData>;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -43,36 +38,27 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
-  // Effect to check for token on mount
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (token) {
-      // Force a refetch of user data if we have a token
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-    }
-  }, []);
-
   const {
     data: user,
     error,
     isLoading,
-  } = useQuery<User | null>({
+  } = useQuery<User>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: false,
   });
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/login", credentials);
-      const data: LoginResponse = await res.json();
-      localStorage.setItem("auth_token", data.token);
-      return data.user;
+      return res.json();
     },
-    onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/user"], user);
+    onSuccess: (data: LoginResponse) => {
+      localStorage.setItem("auth_token", data.token);
+      queryClient.setQueryData(["/api/user"], data.user);
       toast({
         title: "Login successful",
-        description: `Welcome back, ${user.name || user.username}!`,
+        description: `Welcome back, ${data.user.name || data.user.email}!`,
       });
     },
     onError: (error: Error) => {
@@ -108,12 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: user || null,
         isLoading,
         error,
         loginMutation,
         logoutMutation,
-        registerMutation: loginMutation, // Temporarily use login mutation
       }}
     >
       {children}
