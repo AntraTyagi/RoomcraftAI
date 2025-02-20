@@ -1,12 +1,10 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useCredits } from "@/hooks/use-credits";
 import { Loader2, Coins } from "lucide-react";
 
 export default function NavBar() {
   const { user, logoutMutation } = useAuth();
-  const { balance, isLoading } = useCredits();
 
   return (
     <nav className="border-b">
@@ -19,15 +17,11 @@ export default function NavBar() {
             <>
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">
-                  Welcome, {user.name || user.email}
+                  Welcome, {user.name || user.username}
                 </span>
                 <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-full">
                   <Coins className="w-4 h-4 text-primary" />
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <span className="font-medium">{balance} credits</span>
-                  )}
+                  <span className="font-medium">{user.credits} credits</span>
                 </div>
               </div>
               <Button 

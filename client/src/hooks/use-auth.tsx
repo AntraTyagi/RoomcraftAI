@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext, useEffect } from "react";
+import { ReactNode, createContext, useContext } from "react";
 import {
   useQuery,
   useMutation,
@@ -10,8 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 interface User {
   id: string;
   username: string;
-  email: string;
-  name: string;
+  email?: string;
+  name?: string;
   credits: number;
 }
 
@@ -22,7 +22,6 @@ interface LoginData {
 
 interface LoginResponse {
   user: User;
-  token: string;
 }
 
 type AuthContextType = {
@@ -38,15 +37,6 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
-  // Effect to check for token on mount
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (token) {
-      // Force a refetch of user data if we have a token
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-    }
-  }, []);
-
   const {
     data: user,
     error,
@@ -60,14 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/login", credentials);
-      return res.json();
+      const data = await res.json();
+      return { user: data };
     },
     onSuccess: (data: LoginResponse) => {
-      localStorage.setItem("auth_token", data.token);
       queryClient.setQueryData(["/api/user"], data.user);
       toast({
         title: "Login successful",
-        description: `Welcome back, ${data.user.name || data.user.email}!`,
+        description: `Welcome back, ${data.user.name || data.user.username}!`,
       });
     },
     onError: (error: Error) => {
@@ -82,7 +72,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/logout");
-      localStorage.removeItem("auth_token");
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
