@@ -31,6 +31,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
       return res.status(401).json({ message: 'User not found' });
     }
 
+    // Set user data in request
     req.user = {
       id: user._id.toString(),
       email: user.email,
