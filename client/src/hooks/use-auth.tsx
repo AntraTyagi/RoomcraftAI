@@ -10,8 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 interface User {
   id: string;
   username: string;
-  email?: string;
-  name?: string;
   credits: number;
 }
 
@@ -30,6 +28,7 @@ type AuthContextType = {
   error: Error | null;
   loginMutation: UseMutationResult<LoginResponse, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
+  registerMutation: UseMutationResult<LoginResponse, Error, LoginData>;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -57,12 +56,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/user"], data.user);
       toast({
         title: "Login successful",
-        description: `Welcome back, ${data.user.name || data.user.username}!`,
+        description: `Welcome back, ${data.user.username}!`,
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Login failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async (credentials: LoginData) => {
+      const res = await apiRequest("POST", "/api/register", { ...credentials, credits: 10 });
+      const data = await res.json();
+      return { user: data };
+    },
+    onSuccess: (data: LoginResponse) => {
+      queryClient.setQueryData(["/api/user"], data.user);
+      toast({
+        title: "Registration successful",
+        description: `Welcome, ${data.user.username}! You've received 10 free credits.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Registration failed",
         description: error.message,
         variant: "destructive",
       });
@@ -97,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error,
         loginMutation,
         logoutMutation,
+        registerMutation,
       }}
     >
       {children}
