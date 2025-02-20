@@ -19,14 +19,14 @@ export default function NavBar() {
             <>
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">
-                  Welcome, {user.name || user.username}
+                  Welcome, {user.name || user.email}
                 </span>
                 <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-full">
                   <Coins className="w-4 h-4 text-primary" />
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <span className="font-medium">{user.credits} credits</span>
+                    <span className="font-medium">{balance} credits</span>
                   )}
                 </div>
               </div>
