@@ -5,7 +5,6 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { User } from "./models/User";
 import { body, validationResult } from "express-validator";
-import { generateToken } from "./lib/jwt";
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
@@ -13,18 +12,16 @@ export function setupAuth(app: Express) {
     secret: process.env.REPL_ID || "porygon-supremacy",
     resave: false,
     saveUninitialized: false,
-    cookie: {},
+    name: 'roomcraft.sid',
+    cookie: {
+      secure: false, // Set to true in production with HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    },
     store: new MemoryStore({
-      checkPeriod: 86400000,
+      checkPeriod: 86400000 // 24 hours
     }),
   };
-
-  if (app.get("env") === "production") {
-    app.set("trust proxy", 1);
-    sessionSettings.cookie = {
-      secure: true,
-    };
-  }
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
@@ -47,7 +44,6 @@ export function setupAuth(app: Express) {
           id: user._id.toString(),
           email: user.email,
           username: user.email,
-          name: user.name,
           credits: user.credits
         });
       } catch (err) {
@@ -70,7 +66,6 @@ export function setupAuth(app: Express) {
         id: user._id.toString(),
         email: user.email,
         username: user.email,
-        name: user.name,
         credits: user.credits
       });
     } catch (err) {
@@ -78,57 +73,12 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Login endpoint
-  app.post(
-    "/api/login",
-    [
-      body("username").isEmail().withMessage("Please provide a valid email address"),
-      body("password").exists().withMessage("Password is required"),
-    ],
-    async (req, res) => {
-      try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-          return res.status(400).json({ errors: errors.array() });
-        }
-
-        const { username, password } = req.body;
-
-        // Find user
-        const user = await User.findOne({ email: username });
-        if (!user) {
-          return res.status(401).json({ message: "Invalid credentials" });
-        }
-
-        // Check password
-        const isValidPassword = await user.comparePassword(password);
-        if (!isValidPassword) {
-          return res.status(401).json({ message: "Invalid credentials" });
-        }
-
-        // Generate token
-        const token = generateToken({
-          _id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-        });
-
-        res.json({
-          user: {
-            id: user._id.toString(),
-            email: user.email,
-            username: user.email,
-            name: user.name,
-            credits: user.credits,
-          },
-          token,
-        });
-      } catch (error) {
-        console.error("Login error:", error);
-        res.status(500).json({ message: "Error logging in" });
-      }
+  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication failed" });
     }
-  );
+    res.json(req.user);
+  });
 
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
@@ -143,15 +93,6 @@ export function setupAuth(app: Express) {
     if (!req.user) {
       return res.status(401).send("Not logged in");
     }
-
-    // Ensure we're sending back the complete user object with all required fields
-    const user = req.user as any;
-    res.json({
-      id: user.id,
-      email: user.email,
-      username: user.email,
-      name: user.name,
-      credits: user.credits
-    });
+    res.json(req.user);
   });
 }

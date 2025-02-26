@@ -15,32 +15,11 @@ export interface AuthRequest extends Request {
   user?: UserPayload;
 }
 
-export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    // Check if user exists in session
-    if (!req.session?.user) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    // Get user from database to ensure they still exist and get latest data
-    const user = await User.findById(req.session.user.id);
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    // Set user data in request
-    req.user = {
-      id: user._id.toString(),
-      email: user.email,
-      username: user.username,
-      credits: user.credits
-    };
-
-    next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    res.status(401).json({ message: 'Authentication failed' });
+export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: 'Authentication required' });
   }
+  next();
 };
 
 export const generateToken = (user: { _id: string; email: string; name?: string }) => {
