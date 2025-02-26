@@ -61,10 +61,10 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn(),
-      staleTime: 0, // Don't cache data
-      refetchOnWindowFocus: true, // Refetch when window regains focus
-      refetchOnReconnect: true, // Refetch when reconnecting
-      refetchOnMount: true, // Refetch when component mounts
+      staleTime: 1000 * 60, // Cache for 1 minute
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: true,
       retry: false,
     },
     mutations: {
