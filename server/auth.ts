@@ -46,10 +46,14 @@ export function setupAuth(app: Express) {
         return done(null, false, { message: "Invalid credentials" });
       }
 
+      if (!user.isEmailVerified) {
+        return done(null, false, { message: "Please verify your email before logging in" });
+      }
+
       const userForToken = {
         id: user._id.toString(),
         email: user.email,
-        username: user.username, 
+        username: user.email,
         name: user.name,
         credits: user.credits
       };
@@ -85,7 +89,7 @@ export function setupAuth(app: Express) {
       if (existingUser) {
         console.log("User already exists:", existingUser.email);
         return res.status(400).json({ 
-          message: "Email already registered"
+          message: "Email already registered" 
         });
       }
 
@@ -98,40 +102,85 @@ export function setupAuth(app: Express) {
         email,
         password,
         name,
-        username: email, 
+        username: email,
         verificationToken: token,
         verificationTokenExpires: expires,
-        isEmailVerified: true 
+        isEmailVerified: false // Set to false initially
       });
 
       console.log("Attempting to save new user");
       await user.save();
       console.log("User saved successfully:", user._id);
 
-      // Create response object with same structure as login
-      const userResponse = {
-        token: jwt.sign({
-          id: user._id.toString(),
-          email: user.email,
-          username: user.email,
-          name: user.name,
-          credits: user.credits
-        }, JWT_SECRET, { expiresIn: '24h' }),
-        user: {
-          id: user._id.toString(),
-          email: user.email,
-          username: user.email,
-          name: user.name,
-          credits: user.credits
-        }
-      };
+      try {
+        // Send verification email
+        console.log("Attempting to send verification email");
+        await sendVerificationEmail(email, name, token);
+        console.log("Verification email sent successfully");
 
-      res.status(201).json(userResponse);
+        // Create response object
+        const userResponse = {
+          token: jwt.sign({
+            id: user._id.toString(),
+            email: user.email,
+            username: user.email,
+            name: user.name,
+            credits: user.credits
+          }, JWT_SECRET, { expiresIn: '24h' }),
+          user: {
+            id: user._id.toString(),
+            email: user.email,
+            username: user.email,
+            name: user.name,
+            credits: user.credits
+          }
+        };
+
+        res.status(201).json(userResponse);
+      } catch (emailError) {
+        // If email sending fails, delete the user and return error
+        console.error("Failed to send verification email:", emailError);
+        await User.findByIdAndDelete(user._id);
+
+        res.status(500).json({ 
+          message: "Failed to send verification email. Please try again later." 
+        });
+      }
     } catch (error: any) {
       console.error('Registration error:', error);
       res.status(500).json({ 
         message: error.message || "Registration failed" 
       });
+    }
+  });
+
+  app.get("/api/verify-email", async (req, res) => {
+    try {
+      const { token } = req.query;
+      console.log("Email verification attempt with token:", token);
+
+      const user = await User.findOne({
+        verificationToken: token,
+        verificationTokenExpires: { $gt: new Date() }
+      });
+
+      if (!user) {
+        console.log("Invalid or expired token");
+        return res.status(400).json({ 
+          message: "Invalid or expired verification token" 
+        });
+      }
+
+      user.isEmailVerified = true;
+      user.verificationToken = undefined;
+      user.verificationTokenExpires = undefined;
+      await user.save();
+      console.log("Email verified successfully for user:", user.email);
+
+      res.json({ message: "Email verified successfully. You can now log in." });
+    } catch (error) {
+      console.error('Email verification error:', error);
+      res.status(500).json({ message: "Email verification failed" });
     }
   });
 
@@ -165,24 +214,6 @@ export function setupAuth(app: Express) {
 
   app.post("/api/logout", (req, res) => {
     res.json({ message: "Logged out successfully" });
-  });
-
-  app.get("/api/user", (req, res) => {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: "No token provided" });
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    try {
-      const user = jwt.verify(token, JWT_SECRET);
-      res.json(user);
-    } catch (err) {
-      console.error('Token verification failed:', err);
-      res.status(401).json({ message: "Invalid token" });
-    }
   });
 
   // Debug middleware
