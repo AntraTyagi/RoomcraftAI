@@ -62,15 +62,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       console.log("New credit balance:", data.credits);
 
-      // Update the user data in the cache with new credits
+      // Update the user data in the cache
       if (user) {
-        queryClient.setQueryData(["/api/user"], {
+        const updatedUser = {
           ...user,
           credits: data.credits,
-        });
+        };
+        console.log("Updating cached user data:", updatedUser);
+        queryClient.setQueryData(["/api/user"], updatedUser);
       }
     } catch (error) {
       console.error("Failed to refresh credits:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update credit balance",
+        variant: "destructive",
+      });
     }
   };
 

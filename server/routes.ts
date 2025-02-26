@@ -88,10 +88,13 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/credits/balance", authMiddleware, async (req: any, res) => {
     try {
+      console.log("Fetching credit balance for user:", req.user.id);
       const user = await User.findById(req.user.id).select('credits');
       if (!user) {
+        console.log("User not found when fetching credits");
         return res.status(404).json({ message: "User not found" });
       }
+      console.log("Current credit balance:", user.credits);
       res.json({ credits: user.credits });
     } catch (error) {
       console.error("Error fetching credit balance:", error);
