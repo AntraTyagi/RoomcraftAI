@@ -5,24 +5,17 @@ import { setupAuth } from "./auth";
 import { inpaintFurniture } from "./lib/replicate-inpainting";
 import { User } from "./models/User";
 import { CreditHistory } from "./models/CreditHistory";
-import { authMiddleware, type AuthRequest } from "./middleware/auth";
+import { authMiddleware } from "./middleware/auth";
 import { connectDB } from "./lib/mongodb";
-import { generateToken } from "./lib/jwt"; // Import generateToken function
+
 
 export function registerRoutes(app: Express): Server {
-  // Connect to MongoDB
+  // Connect to MongoDB and set up auth
   connectDB();
-
-  // Set up authentication routes
   setupAuth(app);
 
-  // Ensure REPLICATE_API_KEY is set
-  if (!process.env.REPLICATE_API_KEY) {
-    console.error("Warning: REPLICATE_API_KEY environment variable is not set");
-  }
-
   // Login endpoint
-  app.post("/api/login", async (req: AuthRequest, res) => {
+  app.post("/api/login", async (req: any, res) => { //Type added for req
     try {
       const { username, password } = req.body;
 
@@ -38,14 +31,15 @@ export function registerRoutes(app: Express): Server {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Generate token
-      const token = generateToken({
+      // Generate token (This part might need adjustment depending on your session handling)
+      req.session.user = { // Assuming you are using sessions now
         _id: user._id.toString(),
         email: user.email,
         name: user.name,
-      });
+      };
+      req.session.save();
 
-      // Return user data and token
+      // Return user data 
       res.json({
         user: {
           id: user._id.toString(),
@@ -54,7 +48,6 @@ export function registerRoutes(app: Express): Server {
           name: user.name,
           credits: user.credits,
         },
-        token,
       });
     } catch (error) {
       console.error("Login error:", error);
@@ -62,8 +55,9 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+
   // Middleware to check user credits
-  const checkCredits = async (req: AuthRequest, res: any, next: any) => {
+  const checkCredits = async (req: any, res: any, next: any) => { //Type added for req and res
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
@@ -85,7 +79,7 @@ export function registerRoutes(app: Express): Server {
   };
 
   // Get credit history
-  app.get("/api/credits/history", authMiddleware, async (req: AuthRequest, res) => {
+  app.get("/api/credits/history", authMiddleware, async (req: any, res) => { //Type added for req
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
@@ -103,7 +97,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Get current credit balance
-  app.get("/api/credits/balance", authMiddleware, async (req: AuthRequest, res) => {
+  app.get("/api/credits/balance", authMiddleware, async (req: any, res) => { //Type added for req
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
@@ -122,7 +116,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Protected route with credit check for inpainting
-  app.post("/api/inpaint", authMiddleware, checkCredits, async (req: AuthRequest, res) => {
+  app.post("/api/inpaint", authMiddleware, checkCredits, async (req: any, res) => { //Type added for req
     try {
       const { image, mask, prompt } = req.body;
 
@@ -157,7 +151,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Protected route with credit check for generation
-  app.post("/api/generate", authMiddleware, checkCredits, async (req: AuthRequest, res) => {
+  app.post("/api/generate", authMiddleware, checkCredits, async (req: any, res) => {
     try {
       const { image, style, roomType, colorTheme, prompt } = req.body;
 
@@ -192,7 +186,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Get user profile and credits
-  app.get("/api/user", authMiddleware, async (req: AuthRequest, res) => {
+  app.get("/api/user", authMiddleware, async (req: any, res) => { //Type added for req
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
