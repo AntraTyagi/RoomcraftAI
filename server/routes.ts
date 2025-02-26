@@ -32,52 +32,9 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
-  // Login endpoint
-  app.post("/api/login", async (req: any, res) => {
-    try {
-      const { username, password } = req.body;
-
-      // Find user
-      const user = await User.findOne({ email: username });
-      if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      // Check password
-      const isValidPassword = await user.comparePassword(password);
-      if (!isValidPassword) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      // Set user in session
-      req.session.user = {
-        id: user._id.toString(),
-        email: user.email,
-        username: user.email,
-        credits: user.credits,
-      };
-
-      // Return user data 
-      res.json({
-        id: user._id.toString(),
-        email: user.email,
-        username: user.email,
-        credits: user.credits,
-      });
-    } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ message: "Error logging in" });
-    }
-  });
-
-
   // Get credit history
   app.get("/api/credits/history", authMiddleware, async (req: any, res) => {
     try {
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
       const history = await CreditHistory.find({ userId: req.user.id })
         .sort({ timestamp: -1 })
         .limit(50);
@@ -92,10 +49,6 @@ export function registerRoutes(app: Express): Server {
   // Get current credit balance
   app.get("/api/credits/balance", authMiddleware, async (req: any, res) => {
     try {
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
       const user = await User.findById(req.user.id).select('credits');
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -171,31 +124,6 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({
         message: error.message || "Failed to inpaint image",
       });
-    }
-  });
-
-  // Get user profile and credits
-  app.get("/api/user", authMiddleware, async (req: any, res) => {
-    try {
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      const user = await User.findById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      res.json({
-        id: user._id.toString(),
-        email: user.email,
-        username: user.email,
-        name: user.name,
-        credits: user.credits,
-      });
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      res.status(500).json({ message: "Error fetching user profile" });
     }
   });
 
