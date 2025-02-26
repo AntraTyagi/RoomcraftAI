@@ -32,6 +32,36 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
+  // Helper function to handle credit deduction
+  const deductUserCredits = async (userId: string, operationType: 'generate' | 'inpaint') => {
+    try {
+      // Check user credits first
+      const user = await User.findById(userId).select('credits');
+      if (!user) {
+        throw new Error("User not found");
+      }
+      if (user.credits <= 0) {
+        throw new Error("Insufficient credits");
+      }
+
+      // Record credit usage and update user credits atomically
+      await Promise.all([
+        CreditHistory.create({
+          userId,
+          operationType,
+          description: `${operationType === 'generate' ? 'Design generation' : 'Inpainting operation'}`,
+          creditsUsed: 1
+        }),
+        User.findByIdAndUpdate(userId, { $inc: { credits: -1 } })
+      ]);
+
+      return true;
+    } catch (error) {
+      console.error(`Error in credit deduction:`, error);
+      throw error;
+    }
+  };
+
   // 4. Protected API routes - ensure authMiddleware is used for all protected routes
   app.get("/api/credits/history", authMiddleware, async (req: any, res) => {
     try {
@@ -59,7 +89,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Protected route for generation
-  app.post("/api/generate", authMiddleware, checkCredits, async (req: any, res) => {
+  app.post("/api/generate", authMiddleware, async (req: any, res) => {
     try {
       const { image, style, roomType, colorTheme, prompt } = req.body;
 
@@ -69,30 +99,24 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
+      // Deduct credits before generation
+      await deductUserCredits(req.user.id, 'generate');
+
       const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
-
-      // Record credit usage and update user credits
-      await Promise.all([
-        CreditHistory.create({
-          userId: req.user.id,
-          operationType: 'generate',
-          description: 'Design generation',
-          creditsUsed: 1
-        }),
-        User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } })
-      ]);
-
       res.json({ designs });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Generate error:", error);
+      if (error.message === "Insufficient credits") {
+        return res.status(403).json({ message: "Insufficient credits" });
+      }
       res.status(500).json({
-        message: "Failed to generate designs",
+        message: error.message || "Failed to generate designs",
       });
     }
   });
 
   // Protected route for inpainting
-  app.post("/api/inpaint", authMiddleware, checkCredits, async (req: any, res) => {
+  app.post("/api/inpaint", authMiddleware, async (req: any, res) => {
     try {
       console.log("Inpaint request received from user:", req.user.id);
       const { image, mask, prompt } = req.body;
@@ -103,22 +127,16 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
+      // Deduct credits before inpainting
+      await deductUserCredits(req.user.id, 'inpaint');
+
       const inpaintedImage = await inpaintFurniture(image, mask, prompt);
-
-      // Record credit usage and update user credits
-      await Promise.all([
-        CreditHistory.create({
-          userId: req.user.id,
-          operationType: 'inpaint',
-          description: 'Inpainting operation',
-          creditsUsed: 1
-        }),
-        User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } })
-      ]);
-
       res.json({ inpaintedImage });
     } catch (error: any) {
       console.error("Inpainting error:", error);
+      if (error.message === "Insufficient credits") {
+        return res.status(403).json({ message: "Insufficient credits" });
+      }
       res.status(500).json({
         message: error.message || "Failed to inpaint image",
       });
