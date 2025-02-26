@@ -157,6 +157,12 @@ export function registerRoutes(app: Express): Server {
   // Add a temporary endpoint for admin operations (we'll remove this later)
   app.post("/api/admin/add-credits", authMiddleware, async (req: any, res) => {
     try {
+      console.log("Add credits request received. User data:", req.user);
+      if (!req.user || !req.user.id) {
+        console.error("No user data in request");
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
       console.log("Adding credits for user:", req.user.id);
       const user = await User.findByIdAndUpdate(
         req.user.id,

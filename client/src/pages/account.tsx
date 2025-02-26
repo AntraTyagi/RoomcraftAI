@@ -16,6 +16,7 @@ export default function AccountPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: 'include', // Include cookies for authentication
       });
       if (!response.ok) {
         throw new Error("Failed to add credits");
@@ -41,13 +42,12 @@ export default function AccountPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
-      
+
       <div className="grid gap-6">
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">User Information</h2>
           <div className="space-y-2">
-            <p><span className="text-muted-foreground">Name:</span> {user?.name}</p>
-            <p><span className="text-muted-foreground">Email:</span> {user?.email}</p>
+            <p><span className="text-muted-foreground">Username:</span> {user?.username}</p>
             <p><span className="text-muted-foreground">Credits:</span> {user?.credits}</p>
           </div>
         </Card>
