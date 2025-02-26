@@ -3,24 +3,27 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
 import { User } from "./models/User";
-import MemoryStore from "memorystore";
+import MongoStore from 'connect-mongo';
 
 export function setupAuth(app: Express) {
   app.use(session({
     secret: process.env.REPL_ID || 'roomcraft-secret',
-    resave: true,
-    saveUninitialized: false,
     name: 'roomcraft.sid',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
+      collectionName: 'sessions',
+      ttl: 24 * 60 * 60, // 1 day
+      autoRemove: 'native'
+    }),
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
-      secure: false,
+      secure: false, // Must be false for HTTP
       sameSite: 'lax',
       path: '/'
-    },
-    store: new (MemoryStore(session))({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    })
+    }
   }));
 
   app.use(passport.initialize());
@@ -88,8 +91,6 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    console.log('Login request headers:', req.headers);
-
     passport.authenticate("local", (err, user, info) => {
       if (err) {
         console.error('Login error:', err);

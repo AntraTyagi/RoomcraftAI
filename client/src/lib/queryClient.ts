@@ -48,9 +48,7 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
         if (options.on401 === "returnNull") {
           return null;
         }
-        const error = new Error("Authentication required");
-        error.name = "AuthError";
-        throw error;
+        throw new Error("Authentication required");
       }
       throw new Error(await res.text());
     }
