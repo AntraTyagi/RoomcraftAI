@@ -10,13 +10,18 @@ export function setupAuth(app: Express) {
 
   app.use(session({
     secret: process.env.REPL_ID || "development-secret",
-    resave: false,
+    name: 'roomcraft.sid',
+    resave: true,
     saveUninitialized: false,
     store: new MemoryStore({
       checkPeriod: 86400000 // prune expired entries every 24h
     }),
     cookie: {
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      secure: false, // Must be false for HTTP
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax',
+      path: '/'
     }
   }));
 
@@ -46,16 +51,17 @@ export function setupAuth(app: Express) {
     }
   }));
 
-  passport.serializeUser((user, done) => {
+  passport.serializeUser((user: Express.User, done) => {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id, done) => {
+  passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await User.findById(id);
       if (!user) {
         return done(null, false);
       }
+
       done(null, {
         id: user._id.toString(),
         email: user.email,
