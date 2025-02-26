@@ -13,13 +13,23 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  name: {
+    type: String,
+    required: true
+  },
   credits: {
     type: Number,
     default: 10 // Free users get 10 credits
   },
-  name: {
-    type: String,
-    required: true
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: {
+    type: String
+  },
+  verificationTokenExpires: {
+    type: Date
   },
   createdAt: {
     type: Date,
@@ -55,6 +65,9 @@ interface IUser extends mongoose.Document {
   password: string;
   credits: number;
   name: string;
+  isEmailVerified: boolean;
+  verificationToken?: string;
+  verificationTokenExpires?: Date;
   createdAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
