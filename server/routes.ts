@@ -32,7 +32,7 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
-  // 4. Protected API routes
+  // 4. Protected API routes - ensure authMiddleware is used for all protected routes
   app.get("/api/credits/history", authMiddleware, async (req: any, res) => {
     try {
       const history = await CreditHistory.find({ userId: req.user.id })
@@ -94,6 +94,7 @@ export function registerRoutes(app: Express): Server {
   // Protected route for inpainting
   app.post("/api/inpaint", authMiddleware, checkCredits, async (req: any, res) => {
     try {
+      console.log("Inpaint request received from user:", req.user.id);
       const { image, mask, prompt } = req.body;
 
       if (!image || !mask || !prompt) {
