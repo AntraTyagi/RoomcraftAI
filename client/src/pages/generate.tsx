@@ -23,7 +23,7 @@ export default function Generate() {
   const [prompt, setPrompt] = useState("");
   const [generatedDesigns, setGeneratedDesigns] = useState<string[]>([]);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshCredits } = useAuth();
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -42,7 +42,7 @@ export default function Generate() {
     },
     onSuccess: (data) => {
       setGeneratedDesigns(data.designs);
-      refreshCredits(); 
+      refreshCredits();
       toast({
         title: "Success",
         description: "Designs generated successfully!",

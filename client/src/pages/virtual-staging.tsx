@@ -8,6 +8,7 @@ import AreaSelector, { type Area } from "@/components/area-selector";
 import FurnitureOperation from "@/components/furniture-operation";
 import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 
 // Furniture type options with images
 const FURNITURE_TYPES = [
@@ -102,10 +103,14 @@ export default function VirtualStaging() {
   const [furnitureStyle, setFurnitureStyle] = useState<string | undefined>();
   const [furnitureColor, setFurnitureColor] = useState<string | undefined>();
   const { toast } = useToast();
+  const { user, refreshCredits } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const stagingMutation = useMutation({
     mutationFn: async () => {
+      if (!user) {
+        throw new Error("Please login to use virtual staging");
+      }
       if (!selectedAreas.length || !operation || !uploadedImage) {
         throw new Error("Missing required data for staging");
       }
