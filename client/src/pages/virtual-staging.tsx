@@ -8,20 +8,33 @@ import AreaSelector, { type Area } from "@/components/area-selector";
 import FurnitureOperation from "@/components/furniture-operation";
 import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
-import DebugPanel from "@/components/debug-panel";
 
-const DEFAULT_FURNITURE_QUERY = "furniture, couch, sofa, bed, table, desk, cabinet, dresser, indoor plants, potted plants, wall art, paintings, artwork, curtains, window treatments, bookshelf, shelving unit, ottoman, footstool";
+// Furniture type options
+const FURNITURE_TYPES = [
+  { value: "sofa", label: "Sofa" },
+  { value: "chair", label: "Chair" },
+  { value: "table", label: "Table" },
+  { value: "bed", label: "Bed" },
+  { value: "cabinet", label: "Cabinet" },
+  { value: "desk", label: "Desk" }
+];
 
-interface DetectedObject {
-  label: string;
-  confidence: number;
-  box: {
-    x1: number;
-    y1: number;
-    x2: number;
-    y2: number;
-  };
-}
+// Style options
+const STYLE_OPTIONS = [
+  { value: "modern", label: "Modern" },
+  { value: "traditional", label: "Traditional" },
+  { value: "contemporary", label: "Contemporary" },
+  { value: "minimalist", label: "Minimalist" }
+];
+
+// Color options
+const COLOR_OPTIONS = [
+  { value: "natural", label: "Natural Wood" },
+  { value: "white", label: "White" },
+  { value: "black", label: "Black" },
+  { value: "brown", label: "Brown" },
+  { value: "gray", label: "Gray" }
+];
 
 export default function VirtualStaging() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -31,12 +44,6 @@ export default function VirtualStaging() {
   const [furnitureType, setFurnitureType] = useState<string | undefined>();
   const [furnitureStyle, setFurnitureStyle] = useState<string | undefined>();
   const [furnitureColor, setFurnitureColor] = useState<string | undefined>();
-  const [debugImages, setDebugImages] = useState<{
-    input?: string;
-    mask?: string;
-    visualization?: string;
-    prompt?: string;
-  }>({});
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -64,11 +71,6 @@ export default function VirtualStaging() {
 
       const containerRect = containerRef.current?.getBoundingClientRect();
       if (!containerRect || containerRect.width === 0) {
-        toast({
-          title: "Error",
-          description: "Could not determine image dimensions. Please try again.",
-          variant: "destructive",
-        });
         throw new Error("Invalid container dimensions");
       }
 
@@ -98,8 +100,6 @@ export default function VirtualStaging() {
           Maintain the exact same position, scale, and perspective as the furniture in the original image.`;
       }
 
-      setDebugImages(prev => ({ ...prev, prompt }));
-
       const token = localStorage.getItem('auth_token');
       if (!token) {
         throw new Error("Authentication required");
@@ -124,11 +124,6 @@ export default function VirtualStaging() {
       }
 
       const data = await response.json();
-
-      if (!data.inpaintedImage) {
-        throw new Error("No inpainted image received from the server");
-      }
-
       return data;
     },
     onSuccess: (data) => {
@@ -142,7 +137,7 @@ export default function VirtualStaging() {
       console.error("Staging error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to generate staged design. Please try again.",
+        description: error.message || "Failed to modify the image. Please try again.",
         variant: "destructive",
       });
     },
@@ -150,6 +145,8 @@ export default function VirtualStaging() {
 
   const handleImageUpload = (image: string) => {
     setUploadedImage(image);
+    setSelectedAreas([]);
+    setStagedImage(null);
   };
 
   const handleGenerate = () => {
@@ -206,24 +203,33 @@ export default function VirtualStaging() {
           {uploadedImage && (
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">2. Select Area to Modify</h2>
-              <AreaSelector
-                image={uploadedImage}
-                onAreaSelect={setSelectedAreas}
-              />
+              <div ref={containerRef}>
+                <AreaSelector
+                  image={uploadedImage}
+                  onAreaSelect={setSelectedAreas}
+                  selectedAreas={selectedAreas}
+                />
+              </div>
             </Card>
           )}
 
           {selectedAreas.length > 0 && (
-            <FurnitureOperation
-              onOperationSelect={setOperation}
-              onFurnitureTypeSelect={setFurnitureType}
-              onStyleSelect={setFurnitureStyle}
-              onColorSelect={setFurnitureColor}
-              selectedOperation={operation}
-              selectedFurnitureType={furnitureType}
-              selectedStyle={furnitureStyle}
-              selectedColor={furnitureColor}
-            />
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">3. Choose Operation</h2>
+              <FurnitureOperation
+                onOperationSelect={setOperation}
+                onFurnitureTypeSelect={setFurnitureType}
+                onStyleSelect={setFurnitureStyle}
+                onColorSelect={setFurnitureColor}
+                selectedOperation={operation}
+                selectedFurnitureType={furnitureType}
+                selectedStyle={furnitureStyle}
+                selectedColor={furnitureColor}
+                furnitureTypes={FURNITURE_TYPES}
+                styleOptions={STYLE_OPTIONS}
+                colorOptions={COLOR_OPTIONS}
+              />
+            </Card>
           )}
 
           <Button
@@ -242,7 +248,7 @@ export default function VirtualStaging() {
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Room Preview</h2>
             {uploadedImage && stagedImage ? (
-              <div ref={containerRef} id="comparison-slider">
+              <div className="relative w-full aspect-[4/3]">
                 <ComparisonSlider
                   beforeImage={uploadedImage}
                   afterImage={stagedImage}
@@ -250,7 +256,7 @@ export default function VirtualStaging() {
                 />
               </div>
             ) : uploadedImage ? (
-              <div ref={containerRef} id="comparison-slider" className="relative w-full aspect-[4/3]">
+              <div className="relative w-full aspect-[4/3]">
                 <img
                   src={uploadedImage}
                   alt="Original room"
@@ -274,7 +280,7 @@ export default function VirtualStaging() {
                 ))}
               </div>
             ) : (
-              <div ref={containerRef} id="comparison-slider" className="w-full aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
+              <div className="w-full aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
                 <p className="text-muted-foreground">
                   Upload an image to see preview
                 </p>
@@ -283,12 +289,6 @@ export default function VirtualStaging() {
           </Card>
         </div>
       </div>
-      <DebugPanel
-        inputImage={debugImages.input}
-        maskImage={debugImages.mask}
-        visualizationImage={debugImages.visualization}
-        prompt={debugImages.prompt}
-      />
     </div>
   );
 }

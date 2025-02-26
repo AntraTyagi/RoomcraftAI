@@ -1,8 +1,13 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2, Replace } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { FURNITURE_TYPES, FURNITURE_STYLES, FURNITURE_COLORS } from "@/constants/furniture-options";
+
+interface Option {
+  value: string;
+  label: string;
+}
 
 interface FurnitureOperationProps {
   onOperationSelect: (operation: "replace" | "remove") => void;
@@ -13,6 +18,9 @@ interface FurnitureOperationProps {
   selectedFurnitureType?: string;
   selectedStyle?: string;
   selectedColor?: string;
+  furnitureTypes: Option[];
+  styleOptions: Option[];
+  colorOptions: Option[];
 }
 
 export default function FurnitureOperation({
@@ -24,11 +32,16 @@ export default function FurnitureOperation({
   selectedFurnitureType,
   selectedStyle,
   selectedColor,
+  furnitureTypes,
+  styleOptions,
+  colorOptions,
 }: FurnitureOperationProps) {
-  return (
-    <Card className="p-6">
-      <h3 className="text-xl font-semibold mb-6">Choose Operation</h3>
+  const adaptedFurnitureTypes = FURNITURE_TYPES.map(item => ({value: item.name, label: item.label}))
+  const adaptedStyleOptions = FURNITURE_STYLES.map(item => ({value: item.name, label: item.label}))
+  const adaptedColorOptions = FURNITURE_COLORS.map(item => ({value: item.name, label: item.label}))
 
+  return (
+    <div className="space-y-6">
       <div className="flex gap-4 mb-6">
         <Button
           variant={selectedOperation === "replace" ? "default" : "outline"}
@@ -51,85 +64,73 @@ export default function FurnitureOperation({
       {selectedOperation === "replace" && (
         <div className="space-y-6">
           <div>
-            <label className="text-sm font-medium mb-4 block">
+            <label className="text-sm font-medium mb-2 block">
               Furniture Type
             </label>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {FURNITURE_TYPES.map((type) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {adaptedFurnitureTypes.map((type) => (
                 <Card
-                  key={type.name}
-                  className={`cursor-pointer p-4 transition-all hover:border-primary relative ${
-                    selectedFurnitureType === type.name ? "ring-2 ring-primary" : ""
-                  }`}
-                  onClick={() => onFurnitureTypeSelect(type.name)}
+                  key={type.value}
+                  className={cn(
+                    "cursor-pointer p-3 transition-all hover:border-primary",
+                    selectedFurnitureType === type.value && "ring-2 ring-primary"
+                  )}
+                  onClick={() => onFurnitureTypeSelect(type.value)}
                 >
-                  <div className="aspect-video mb-3 rounded-md overflow-hidden">
-                    <img
-                      src={type.image}
-                      alt={type.label}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="text-center">
+                    <h4 className="font-medium">{type.label}</h4>
                   </div>
-                  <h4 className="font-medium">{type.label}</h4>
-                  <p className="text-sm text-muted-foreground">{type.description}</p>
                 </Card>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-4 block">
+            <label className="text-sm font-medium mb-2 block">
               Style
             </label>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {FURNITURE_STYLES.map((style) => (
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
+              {adaptedStyleOptions.map((style) => (
                 <Card
-                  key={style.name}
-                  className={`cursor-pointer p-4 transition-all hover:border-primary relative ${
-                    selectedStyle === style.name ? "ring-2 ring-primary" : ""
-                  }`}
-                  onClick={() => onStyleSelect(style.name)}
+                  key={style.value}
+                  className={cn(
+                    "cursor-pointer p-3 transition-all hover:border-primary",
+                    selectedStyle === style.value && "ring-2 ring-primary"
+                  )}
+                  onClick={() => onStyleSelect(style.value)}
                 >
-                  <div className="aspect-video mb-3 rounded-md overflow-hidden">
-                    <img
-                      src={style.image}
-                      alt={style.label}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="text-center">
+                    <h4 className="font-medium">{style.label}</h4>
                   </div>
-                  <h4 className="font-medium">{style.label}</h4>
-                  <p className="text-sm text-muted-foreground">{style.description}</p>
                 </Card>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-4 block">
+            <label className="text-sm font-medium mb-2 block">
               Color
             </label>
-            <div className="grid grid-cols-3 gap-4">
-              {FURNITURE_COLORS.map((color) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {adaptedColorOptions.map((color) => (
                 <Card
-                  key={color.name}
-                  className={`cursor-pointer p-4 transition-all hover:border-primary relative ${
-                    selectedColor === color.name ? "ring-2 ring-primary" : ""
-                  }`}
-                  onClick={() => onColorSelect(color.name)}
+                  key={color.value}
+                  className={cn(
+                    "cursor-pointer p-3 transition-all hover:border-primary",
+                    selectedColor === color.value && "ring-2 ring-primary"
+                  )}
+                  onClick={() => onColorSelect(color.value)}
                 >
-                  <div
-                    className="w-full h-12 rounded-md mb-2"
-                    style={{ backgroundColor: color.hex }}
-                  />
-                  <h4 className="font-medium">{color.label}</h4>
-                  <p className="text-xs text-muted-foreground">{color.description}</p>
+                  <div className="text-center">
+                    <h4 className="font-medium">{color.label}</h4>
+                  </div>
                 </Card>
               ))}
             </div>
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
