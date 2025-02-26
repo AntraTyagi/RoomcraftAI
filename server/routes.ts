@@ -91,6 +91,7 @@ export function registerRoutes(app: Express): Server {
   // Protected route for generation
   app.post("/api/generate", authMiddleware, async (req: any, res) => {
     try {
+      console.log("Generate request received from user:", req.user.id);
       const { image, style, roomType, colorTheme, prompt } = req.body;
 
       if (!image || !style) {
@@ -99,10 +100,25 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Deduct credits before generation
-      await deductUserCredits(req.user.id, 'generate');
+      // Check and deduct credits
+      try {
+        console.log("Checking credits for user:", req.user.id);
+        await deductUserCredits(req.user.id, 'generate');
+        console.log("Credits deducted successfully");
+      } catch (error: any) {
+        console.error("Credit deduction failed:", error);
+        return res.status(403).json({ message: error.message || "Credit deduction failed" });
+      }
 
+      // Generate designs
+      console.log("Generating designs with params:", { style, roomType, colorTheme });
       const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
+
+      if (!designs || !designs.length) {
+        throw new Error("No designs were generated");
+      }
+
+      console.log("Designs generated successfully:", designs.length);
       res.json({ designs });
     } catch (error: any) {
       console.error("Generate error:", error);

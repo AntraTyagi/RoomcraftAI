@@ -30,6 +30,8 @@ export async function generateDesign(
       designPrompt += ` Additional requirements: ${prompt}`;
     }
 
+    console.log('Sending request to Replicate with prompt:', designPrompt);
+
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
@@ -40,13 +42,14 @@ export async function generateDesign(
         version: "c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316",
         input: {
           prompt: designPrompt,
+          negative_prompt: "blurry, low quality, distorted, unrealistic",
           image: imageUrl,
-          num_outputs: 2, // Reduced from 4 to 2
-          guidance_scale: 7.0, // Slightly reduced from 7.5
-          num_inference_steps: 30, // Reduced from 50
-          scheduler: "K_EULER", // Changed from K_EULER_ANCESTRAL for better memory usage
-          width: 768,  // Reduced dimensions
-          height: 768,
+          num_outputs: 2,
+          guidance_scale: 7.5,
+          num_inference_steps: 50,
+          scheduler: "K_EULER_ANCESTRAL",
+          width: 1024,
+          height: 1024,
         },
       }),
     });
@@ -60,7 +63,7 @@ export async function generateDesign(
     const prediction = await response.json();
     console.log("Prediction created:", prediction.id);
 
-    // Poll for results since Replicate API is asynchronous
+    // Poll for results
     const getResult = async (url: string): Promise<string[]> => {
       const result = await fetch(url, {
         headers: {
@@ -75,20 +78,25 @@ export async function generateDesign(
       }
 
       const data = await result.json();
-      console.log("Prediction status:", data.status);
+      console.log("Prediction status:", data.status, "Output:", data.output);
 
       if (data.status === "succeeded") {
+        if (!Array.isArray(data.output) || data.output.length === 0) {
+          throw new Error("Invalid output format from Replicate API");
+        }
         return data.output;
       } else if (data.status === "failed") {
         throw new Error(data.error || "Generation failed");
       }
 
-      // Continue polling every 1 second
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Continue polling every 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 2000));
       return getResult(url);
     };
 
-    return getResult(prediction.urls.get);
+    const results = await getResult(prediction.urls.get);
+    console.log("Generated images:", results);
+    return results;
   } catch (error) {
     console.error("Generate design error:", error);
     throw error;
