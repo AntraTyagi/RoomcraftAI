@@ -2,11 +2,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2, Replace } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FURNITURE_TYPES, FURNITURE_STYLES, FURNITURE_COLORS } from "@/constants/furniture-options";
 
 interface Option {
   value: string;
   label: string;
+  image?: string;
+  hex?: string;
+  description?: string;
 }
 
 interface FurnitureOperationProps {
@@ -36,10 +38,6 @@ export default function FurnitureOperation({
   styleOptions,
   colorOptions,
 }: FurnitureOperationProps) {
-  const adaptedFurnitureTypes = FURNITURE_TYPES.map(item => ({value: item.name, label: item.label}))
-  const adaptedStyleOptions = FURNITURE_STYLES.map(item => ({value: item.name, label: item.label}))
-  const adaptedColorOptions = FURNITURE_COLORS.map(item => ({value: item.name, label: item.label}))
-
   return (
     <div className="space-y-6">
       <div className="flex gap-4 mb-6">
@@ -67,18 +65,25 @@ export default function FurnitureOperation({
             <label className="text-sm font-medium mb-2 block">
               Furniture Type
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {adaptedFurnitureTypes.map((type) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {furnitureTypes.map((type) => (
                 <Card
                   key={type.value}
                   className={cn(
-                    "cursor-pointer p-3 transition-all hover:border-primary",
+                    "cursor-pointer overflow-hidden transition-all hover:border-primary",
                     selectedFurnitureType === type.value && "ring-2 ring-primary"
                   )}
                   onClick={() => onFurnitureTypeSelect(type.value)}
                 >
-                  <div className="text-center">
-                    <h4 className="font-medium">{type.label}</h4>
+                  <div className="aspect-[4/3] w-full overflow-hidden">
+                    <img
+                      src={type.image}
+                      alt={type.label}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="p-3">
+                    <h4 className="font-medium text-center">{type.label}</h4>
                   </div>
                 </Card>
               ))}
@@ -89,18 +94,26 @@ export default function FurnitureOperation({
             <label className="text-sm font-medium mb-2 block">
               Style
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
-              {adaptedStyleOptions.map((style) => (
+            <div className="grid grid-cols-2 gap-4">
+              {styleOptions.map((style) => (
                 <Card
                   key={style.value}
                   className={cn(
-                    "cursor-pointer p-3 transition-all hover:border-primary",
+                    "cursor-pointer overflow-hidden transition-all hover:border-primary",
                     selectedStyle === style.value && "ring-2 ring-primary"
                   )}
                   onClick={() => onStyleSelect(style.value)}
                 >
-                  <div className="text-center">
+                  <div className="aspect-[4/3] w-full overflow-hidden">
+                    <img
+                      src={style.image}
+                      alt={style.label}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="p-3">
                     <h4 className="font-medium">{style.label}</h4>
+                    <p className="text-sm text-muted-foreground">{style.description}</p>
                   </div>
                 </Card>
               ))}
@@ -111,18 +124,22 @@ export default function FurnitureOperation({
             <label className="text-sm font-medium mb-2 block">
               Color
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {adaptedColorOptions.map((color) => (
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              {colorOptions.map((color) => (
                 <Card
                   key={color.value}
                   className={cn(
-                    "cursor-pointer p-3 transition-all hover:border-primary",
+                    "cursor-pointer transition-all hover:border-primary",
                     selectedColor === color.value && "ring-2 ring-primary"
                   )}
                   onClick={() => onColorSelect(color.value)}
                 >
-                  <div className="text-center">
-                    <h4 className="font-medium">{color.label}</h4>
+                  <div className="p-2">
+                    <div
+                      className="w-full aspect-square rounded-full border border-border mb-2"
+                      style={{ backgroundColor: color.hex }}
+                    />
+                    <p className="text-xs text-center">{color.label}</p>
                   </div>
                 </Card>
               ))}

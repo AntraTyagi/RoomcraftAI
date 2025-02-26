@@ -9,31 +9,88 @@ import FurnitureOperation from "@/components/furniture-operation";
 import ComparisonSlider from "@/components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
 
-// Furniture type options
+// Furniture type options with images
 const FURNITURE_TYPES = [
-  { value: "sofa", label: "Sofa" },
-  { value: "chair", label: "Chair" },
-  { value: "table", label: "Table" },
-  { value: "bed", label: "Bed" },
-  { value: "cabinet", label: "Cabinet" },
-  { value: "desk", label: "Desk" }
+  {
+    value: "sofa",
+    label: "Sofa",
+    image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&q=80"
+  },
+  {
+    value: "chair",
+    label: "Chair",
+    image: "https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500&q=80"
+  },
+  {
+    value: "table",
+    label: "Table",
+    image: "https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?w=500&q=80"
+  },
+  {
+    value: "bed",
+    label: "Bed",
+    image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=500&q=80"
+  },
+  {
+    value: "cabinet",
+    label: "Cabinet",
+    image: "https://images.unsplash.com/photo-1493957988430-a5f2e15f39a3?w=500&q=80"
+  },
+  {
+    value: "desk",
+    label: "Desk",
+    image: "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=500&q=80"
+  }
 ];
 
-// Style options
+// Style options with images
 const STYLE_OPTIONS = [
-  { value: "modern", label: "Modern" },
-  { value: "traditional", label: "Traditional" },
-  { value: "contemporary", label: "Contemporary" },
-  { value: "minimalist", label: "Minimalist" }
+  {
+    value: "modern",
+    label: "Modern",
+    image: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=500&q=80",
+    description: "Clean lines, minimalist approach"
+  },
+  {
+    value: "bohemian",
+    label: "Bohemian",
+    image: "https://images.unsplash.com/photo-1534349762230-e0cadf78f5da?w=500&q=80",
+    description: "Eclectic, artistic, free-spirited"
+  },
+  {
+    value: "victorian",
+    label: "Victorian",
+    image: "https://images.unsplash.com/photo-1472228283686-42356d789f66?w=500&q=80",
+    description: "Ornate, traditional, elegant"
+  },
+  {
+    value: "contemporary",
+    label: "Contemporary",
+    image: "https://images.unsplash.com/photo-1611094016919-36b65678f3d6?w=500&q=80",
+    description: "Current trends, sophisticated"
+  }
 ];
 
-// Color options
+// Color options with hex values for swatches
 const COLOR_OPTIONS = [
-  { value: "natural", label: "Natural Wood" },
-  { value: "white", label: "White" },
-  { value: "black", label: "Black" },
-  { value: "brown", label: "Brown" },
-  { value: "gray", label: "Gray" }
+  { value: "white", label: "White", hex: "#FFFFFF" },
+  { value: "cream", label: "Cream", hex: "#FDFBF3" },
+  { value: "beige", label: "Beige", hex: "#F5F5DC" },
+  { value: "lightGray", label: "Light Gray", hex: "#D3D3D3" },
+  { value: "gray", label: "Gray", hex: "#808080" },
+  { value: "charcoal", label: "Charcoal", hex: "#36454F" },
+  { value: "black", label: "Black", hex: "#000000" },
+  { value: "navy", label: "Navy", hex: "#000080" },
+  { value: "lightBlue", label: "Light Blue", hex: "#ADD8E6" },
+  { value: "teal", label: "Teal", hex: "#008080" },
+  { value: "sage", label: "Sage", hex: "#BCB88A" },
+  { value: "forestGreen", label: "Forest Green", hex: "#228B22" },
+  { value: "olive", label: "Olive", hex: "#808000" },
+  { value: "brown", label: "Brown", hex: "#8B4513" },
+  { value: "burgundy", label: "Burgundy", hex: "#800020" },
+  { value: "rust", label: "Rust", hex: "#B7410E" },
+  { value: "terracotta", label: "Terracotta", hex: "#E2725B" },
+  { value: "natural", label: "Natural Wood", hex: "#DEB887" }
 ];
 
 export default function VirtualStaging() {
