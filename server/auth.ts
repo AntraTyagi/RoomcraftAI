@@ -4,19 +4,18 @@ import { type Express } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { User } from "./models/User";
-import { body, validationResult } from "express-validator";
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPL_ID || "porygon-supremacy",
-    resave: true, // Changed to true to ensure session is saved
-    saveUninitialized: true, // Changed to true to ensure session is saved
+    resave: true,
+    saveUninitialized: true,
     name: 'roomcraft.sid',
     cookie: {
-      secure: false, // Must be false for HTTP
+      secure: false,
       httpOnly: true,
-      sameSite: 'lax', // Added sameSite option
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     },
     store: new MemoryStore({
@@ -54,28 +53,34 @@ export function setupAuth(app: Express) {
   );
 
   passport.serializeUser((user: any, done) => {
+    console.log('Serializing user:', user);
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: string, done) => {
+    console.log('Deserializing user id:', id);
     try {
       const user = await User.findById(id);
       if (!user) {
+        console.log('User not found during deserialization');
         return done(null, false);
       }
-      done(null, {
+      const userData = {
         id: user._id.toString(),
         email: user.email,
         username: user.email,
         credits: user.credits
-      });
+      };
+      console.log('Deserialized user:', userData);
+      done(null, userData);
     } catch (err) {
+      console.error('Deserialization error:', err);
       done(err);
     }
   });
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    console.log("Login successful, user:", req.user); // Added logging
+    console.log("Login successful, user:", req.user);
     res.json(req.user);
   });
 
@@ -89,8 +94,10 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    console.log("User check, session:", req.session); // Added logging
-    console.log("User check, authenticated:", req.isAuthenticated()); // Added logging
+    console.log("User check - session:", req.session);
+    console.log("User check - isAuthenticated:", req.isAuthenticated());
+    console.log("User check - user:", req.user);
+
     if (!req.user) {
       return res.status(401).send("Not logged in");
     }

@@ -13,6 +13,33 @@ export function registerRoutes(app: Express): Server {
   connectDB();
   setupAuth(app);
 
+  // Middleware to check user credits
+  const checkCredits = async (req: any, res: any, next: any) => {
+    try {
+      console.log('Check credits - session:', req.session);
+      console.log('Check credits - isAuthenticated:', req.isAuthenticated());
+      console.log('Check credits - user:', req.user);
+
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (user.credits <= 0) {
+        return res.status(403).json({ message: "Insufficient credits" });
+      }
+
+      next();
+    } catch (error) {
+      console.error("Credits check error:", error);
+      res.status(500).json({ message: "Error checking credits" });
+    }
+  };
+
   // Login endpoint
   app.post("/api/login", async (req: any, res) => {
     try {
@@ -51,29 +78,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-
-  // Middleware to check user credits
-  const checkCredits = async (req: any, res: any, next: any) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      const user = await User.findById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      if (user.credits <= 0) {
-        return res.status(403).json({ message: "Insufficient credits" });
-      }
-
-      next();
-    } catch (error) {
-      console.error("Credits check error:", error);
-      res.status(500).json({ message: "Error checking credits" });
-    }
-  };
 
   // Get credit history
   app.get("/api/credits/history", authMiddleware, async (req: any, res) => {
@@ -147,9 +151,27 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Protected route with credit check for generation
-  app.post("/api/generate", authMiddleware, checkCredits, async (req: any, res) => {
+  // Protected route for generation
+  app.post("/api/generate", async (req: any, res) => {
     try {
+      console.log('Generate - session:', req.session);
+      console.log('Generate - isAuthenticated:', req.isAuthenticated());
+      console.log('Generate - user:', req.user);
+
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Check credits
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (user.credits <= 0) {
+        return res.status(403).json({ message: "Insufficient credits" });
+      }
+
       const { image, style, roomType, colorTheme, prompt } = req.body;
 
       if (!image || !style) {
@@ -161,17 +183,15 @@ export function registerRoutes(app: Express): Server {
       const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
 
       // Record credit usage
-      if (req.user) {
-        await CreditHistory.create({
-          userId: req.user.id,
-          operationType: 'generate',
-          description: 'Design generation',
-          creditsUsed: 1
-        });
+      await CreditHistory.create({
+        userId: req.user.id,
+        operationType: 'generate',
+        description: 'Design generation',
+        creditsUsed: 1
+      });
 
-        // Deduct credit after successful operation
-        await User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } });
-      }
+      // Deduct credit after successful operation
+      await User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } });
 
       res.json({ designs });
     } catch (error) {
