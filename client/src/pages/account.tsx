@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function AccountPage() {
   const { user, refreshCredits } = useAuth();
@@ -11,13 +12,7 @@ export default function AccountPage() {
 
   const addCreditsMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/admin/add-credits", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: 'include', // Include cookies for authentication
-      });
+      const response = await apiRequest("POST", "/api/admin/add-credits");
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to add credits");
