@@ -18,7 +18,7 @@ export async function apiRequest(
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
-    credentials: "same-origin", // Important: ensures cookies are sent with requests
+    credentials: "include", // Important: ensures cookies are sent with requests
   });
 
   if (!response.ok) {
@@ -37,7 +37,7 @@ export async function apiRequest(
 export function getQueryFn(options: GetQueryFnOptions = {}) {
   return async ({ queryKey }: { queryKey: QueryKey }) => {
     const res = await fetch(queryKey[0] as string, {
-      credentials: "same-origin", // Important: ensures cookies are sent with requests
+      credentials: "include", // Important: ensures cookies are sent with requests
       headers: {
         "Content-Type": "application/json",
       }
