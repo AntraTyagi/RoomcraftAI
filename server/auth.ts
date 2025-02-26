@@ -3,13 +3,31 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import jwt from 'jsonwebtoken';
 import { User } from "./models/User";
-import { sendVerificationEmail, generateVerificationToken } from './lib/email';
+import { sendVerificationEmail, generateVerificationToken, verifyEmailTransporter } from './lib/email';
 
 const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
 export function setupAuth(app: Express) {
-  // Initialize passport for the initial authentication
   app.use(passport.initialize());
+
+  // Test route for email configuration
+  app.get("/api/test-email-config", async (req, res) => {
+    try {
+      const result = await verifyEmailTransporter();
+      res.json({ 
+        status: 'success',
+        message: 'Email configuration is working',
+        details: result
+      });
+    } catch (error: any) {
+      console.error('Email configuration test failed:', error);
+      res.status(500).json({ 
+        status: 'error',
+        message: 'Email configuration test failed',
+        error: error.message
+      });
+    }
+  });
 
   passport.use(new LocalStrategy(async (username, password, done) => {
     try {
@@ -32,7 +50,6 @@ export function setupAuth(app: Express) {
         return done(null, false, { message: "Please verify your email before logging in" });
       }
 
-      // Create user object without sensitive data
       const userForToken = {
         id: user._id.toString(),
         email: user.email,
@@ -51,16 +68,36 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
+      console.log("Registration attempt with data:", { 
+        email: req.body.email, 
+        name: req.body.name,
+        username: req.body.username 
+      });
+
       const { email, password, name, username } = req.body;
 
+      if (!email || !password || !name || !username) {
+        console.log("Missing required fields");
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
       // Check if user already exists
-      const existingUser = await User.findOne({ email });
+      const existingUser = await User.findOne({ 
+        $or: [{ email }, { username }] 
+      });
+
       if (existingUser) {
-        return res.status(400).json({ message: "Email already registered" });
+        console.log("User already exists:", existingUser.email);
+        return res.status(400).json({ 
+          message: existingUser.email === email 
+            ? "Email already registered" 
+            : "Username already taken" 
+        });
       }
 
       // Generate verification token
       const { token, expires } = generateVerificationToken();
+      console.log("Generated verification token:", { token, expires });
 
       // Create new user
       const user = new User({
@@ -72,23 +109,40 @@ export function setupAuth(app: Express) {
         verificationTokenExpires: expires
       });
 
+      console.log("Attempting to save new user");
       await user.save();
+      console.log("User saved successfully:", user._id);
 
-      // Send verification email
-      await sendVerificationEmail(email, name, token);
+      try {
+        // Send verification email
+        console.log("Attempting to send verification email");
+        await sendVerificationEmail(email, name, token);
+        console.log("Verification email sent successfully");
 
-      res.status(201).json({ 
-        message: "Registration successful. Please check your email to verify your account." 
-      });
-    } catch (error) {
+        res.status(201).json({ 
+          message: "Registration successful. Please check your email to verify your account." 
+        });
+      } catch (emailError) {
+        // If email sending fails, delete the user and return error
+        console.error("Failed to send verification email:", emailError);
+        await User.findByIdAndDelete(user._id);
+
+        res.status(500).json({ 
+          message: "Failed to send verification email. Please try again later." 
+        });
+      }
+    } catch (error: any) {
       console.error('Registration error:', error);
-      res.status(500).json({ message: "Registration failed" });
+      res.status(500).json({ 
+        message: error.message || "Registration failed" 
+      });
     }
   });
 
   app.get("/api/verify-email", async (req, res) => {
     try {
       const { token } = req.query;
+      console.log("Email verification attempt with token:", token);
 
       const user = await User.findOne({
         verificationToken: token,
@@ -96,6 +150,7 @@ export function setupAuth(app: Express) {
       });
 
       if (!user) {
+        console.log("Invalid or expired token");
         return res.status(400).json({ 
           message: "Invalid or expired verification token" 
         });
@@ -105,6 +160,7 @@ export function setupAuth(app: Express) {
       user.verificationToken = undefined;
       user.verificationTokenExpires = undefined;
       await user.save();
+      console.log("Email verified successfully for user:", user.email);
 
       res.json({ message: "Email verified successfully. You can now log in." });
     } catch (error) {
@@ -125,7 +181,6 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
 
-      // Generate JWT token
       const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
       console.log('Login successful - Token generated');
 
@@ -155,7 +210,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Debug middleware remains (though session data will be empty)
+  // Debug middleware
   app.use((req, res, next) => {
     console.log('\n=== Request Debug ===');
     console.log('Session ID:', req.sessionID);
