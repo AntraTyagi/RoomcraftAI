@@ -22,6 +22,11 @@ export async function apiRequest(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      const error = new Error("Authentication required");
+      error.name = "AuthError";
+      throw error;
+    }
     const errorText = await response.text();
     throw new Error(errorText || response.statusText);
   }
@@ -43,6 +48,9 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
         if (options.on401 === "returnNull") {
           return null;
         }
+        const error = new Error("Authentication required");
+        error.name = "AuthError";
+        throw error;
       }
       throw new Error(await res.text());
     }
@@ -56,7 +64,9 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn(),
       staleTime: 0, // Don't cache data
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true, // Refetch when window regains focus
+      refetchOnReconnect: true, // Refetch when reconnecting
+      refetchOnMount: true, // Refetch when component mounts
       retry: false,
     },
     mutations: {
