@@ -85,7 +85,15 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Check and deduct credits first
+      // Generate designs first
+      console.log("Generating designs with params:", { style, roomType, colorTheme });
+      const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
+
+      if (!designs || !designs.length) {
+        throw new Error("No designs were generated");
+      }
+
+      // Only deduct credits if generation was successful
       try {
         await deductUserCredits(req.user.id, 'generate');
         console.log("Credits successfully deducted for generation");
@@ -103,15 +111,9 @@ export function registerRoutes(app: Express): Server {
 
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
-        return res.status(403).json({ message: error.message || "Credit deduction failed" });
-      }
-
-      // Generate designs
-      console.log("Generating designs with params:", { style, roomType, colorTheme });
-      const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
-
-      if (!designs || !designs.length) {
-        throw new Error("No designs were generated");
+        // Even if credit deduction fails, we still return the generated designs
+        // but log the error for investigation
+        console.error("Credit deduction failed but designs were generated:", error);
       }
 
       console.log("Designs generated successfully:", designs.length);
@@ -127,7 +129,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Protected route for inpainting
+  // Protected route for inpainting - same logic applied here
   app.post("/api/inpaint", authMiddleware, async (req: any, res) => {
     try {
       console.log("Inpaint request received from user:", req.user.id);
@@ -139,7 +141,10 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Deduct credits first
+      // Do inpainting first
+      const inpaintedImage = await inpaintFurniture(image, mask, prompt);
+
+      // Only deduct credits if inpainting was successful
       try {
         await deductUserCredits(req.user.id, 'inpaint');
         console.log("Credits successfully deducted for inpainting");
@@ -155,10 +160,11 @@ export function registerRoutes(app: Express): Server {
         });
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
-        return res.status(403).json({ message: error.message || "Credit deduction failed" });
+        // Even if credit deduction fails, we still return the inpainted image
+        // but log the error for investigation
+        console.error("Credit deduction failed but inpainting was successful:", error);
       }
 
-      const inpaintedImage = await inpaintFurniture(image, mask, prompt);
       res.json({ inpaintedImage });
     } catch (error: any) {
       console.error("Inpainting error:", error);
