@@ -8,6 +8,7 @@ import Generate from "@/pages/generate";
 import AuthPage from "@/pages/auth-page";
 import VirtualStaging from "@/pages/virtual-staging";
 import Account from "@/pages/account";
+import VerifyEmail from "@/pages/verify-email"; // New import
 import Layout from "@/components/layout";
 import { AuthProvider } from "@/hooks/use-auth";
 
@@ -20,6 +21,7 @@ function Router() {
         <Route path="/virtual-staging" component={VirtualStaging} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/account" component={Account} />
+        <Route path="/verify-email" component={VerifyEmail} /> {/* New Route */}
         <Route component={NotFound} />
       </Switch>
     </Layout>
