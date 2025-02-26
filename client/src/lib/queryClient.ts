@@ -34,7 +34,7 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
     const res = await fetch(queryKey[0] as string, { 
       credentials: "include", // Always include credentials
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       }
     });
 
@@ -55,9 +55,8 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn(),
-      refetchInterval: false,
+      staleTime: 0, // Don't cache data
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
       retry: false,
     },
     mutations: {

@@ -8,14 +8,13 @@ import { CreditHistory } from "./models/CreditHistory";
 import { authMiddleware } from "./middleware/auth";
 import { connectDB } from "./lib/mongodb";
 
-
 export function registerRoutes(app: Express): Server {
   // Connect to MongoDB and set up auth
   connectDB();
   setupAuth(app);
 
   // Login endpoint
-  app.post("/api/login", async (req: any, res) => { //Type added for req
+  app.post("/api/login", async (req: any, res) => {
     try {
       const { username, password } = req.body;
 
@@ -31,23 +30,20 @@ export function registerRoutes(app: Express): Server {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Generate token (This part might need adjustment depending on your session handling)
-      req.session.user = { // Assuming you are using sessions now
-        _id: user._id.toString(),
+      // Set user in session
+      req.session.user = {
+        id: user._id.toString(),
         email: user.email,
-        name: user.name,
+        username: user.email,
+        credits: user.credits,
       };
-      req.session.save();
 
       // Return user data 
       res.json({
-        user: {
-          id: user._id.toString(),
-          email: user.email,
-          username: user.email,
-          name: user.name,
-          credits: user.credits,
-        },
+        id: user._id.toString(),
+        email: user.email,
+        username: user.email,
+        credits: user.credits,
       });
     } catch (error) {
       console.error("Login error:", error);
@@ -57,13 +53,13 @@ export function registerRoutes(app: Express): Server {
 
 
   // Middleware to check user credits
-  const checkCredits = async (req: any, res: any, next: any) => { //Type added for req and res
+  const checkCredits = async (req: any, res: any, next: any) => {
     try {
-      if (!req.user) {
+      if (!req.session?.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const user = await User.findById(req.user.id);
+      const user = await User.findById(req.session.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -79,7 +75,7 @@ export function registerRoutes(app: Express): Server {
   };
 
   // Get credit history
-  app.get("/api/credits/history", authMiddleware, async (req: any, res) => { //Type added for req
+  app.get("/api/credits/history", authMiddleware, async (req: any, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
@@ -97,7 +93,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Get current credit balance
-  app.get("/api/credits/balance", authMiddleware, async (req: any, res) => { //Type added for req
+  app.get("/api/credits/balance", authMiddleware, async (req: any, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
@@ -116,7 +112,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Protected route with credit check for inpainting
-  app.post("/api/inpaint", authMiddleware, checkCredits, async (req: any, res) => { //Type added for req
+  app.post("/api/inpaint", authMiddleware, checkCredits, async (req: any, res) => {
     try {
       const { image, mask, prompt } = req.body;
 
@@ -153,6 +149,10 @@ export function registerRoutes(app: Express): Server {
   // Protected route with credit check for generation
   app.post("/api/generate", authMiddleware, checkCredits, async (req: any, res) => {
     try {
+      if (!req.session?.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
       const { image, style, roomType, colorTheme, prompt } = req.body;
 
       if (!image || !style) {
@@ -164,16 +164,16 @@ export function registerRoutes(app: Express): Server {
       const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
 
       // Record credit usage
-      if (req.user) {
+      if (req.session.user) {
         await CreditHistory.create({
-          userId: req.user.id,
+          userId: req.session.user.id,
           operationType: 'generate',
           description: 'Design generation',
           creditsUsed: 1
         });
 
         // Deduct credit after successful operation
-        await User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } });
+        await User.findByIdAndUpdate(req.session.user.id, { $inc: { credits: -1 } });
       }
 
       res.json({ designs });
@@ -186,7 +186,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Get user profile and credits
-  app.get("/api/user", authMiddleware, async (req: any, res) => { //Type added for req
+  app.get("/api/user", authMiddleware, async (req: any, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
