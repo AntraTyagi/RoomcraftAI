@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../lib/jwt';
 import { User } from '../models/User';
 import jwt from 'jsonwebtoken';
 
@@ -8,7 +7,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 export interface UserPayload {
   id: string;
   email: string;
-  name?: string;
+  username: string;
+  credits: number;
 }
 
 export interface AuthRequest extends Request {
@@ -17,16 +17,13 @@ export interface AuthRequest extends Request {
 
 export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-
-    if (!token) {
+    // Check if user exists in session
+    if (!req.session?.user) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const decoded = verifyToken(token);
-
-    // Verify user exists in database
-    const user = await User.findById(decoded._id);
+    // Get user from database to ensure they still exist and get latest data
+    const user = await User.findById(req.session.user.id);
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
@@ -35,13 +32,14 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     req.user = {
       id: user._id.toString(),
       email: user.email,
-      name: user.name
+      username: user.username,
+      credits: user.credits
     };
 
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
-    res.status(401).json({ message: 'Invalid token' });
+    res.status(401).json({ message: 'Authentication failed' });
   }
 };
 
