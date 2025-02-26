@@ -18,7 +18,7 @@ export async function apiRequest(
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
-    credentials: "include", // Always include credentials
+    credentials: "same-origin", // Important: ensures cookies are sent with requests
   });
 
   if (!response.ok) {
@@ -36,8 +36,8 @@ export async function apiRequest(
 
 export function getQueryFn(options: GetQueryFnOptions = {}) {
   return async ({ queryKey }: { queryKey: QueryKey }) => {
-    const res = await fetch(queryKey[0] as string, { 
-      credentials: "include", // Always include credentials
+    const res = await fetch(queryKey[0] as string, {
+      credentials: "same-origin", // Important: ensures cookies are sent with requests
       headers: {
         "Content-Type": "application/json",
       }
@@ -61,7 +61,7 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn(),
-      staleTime: 1000 * 60, // Cache for 1 minute
+      staleTime: 0, // Don't cache authentication data
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       refetchOnMount: true,

@@ -2,22 +2,25 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
-import { User } from "./models/User";
 import MongoStore from 'connect-mongo';
+import { User } from "./models/User";
 
 export function setupAuth(app: Express) {
-  // Setup session middleware
+  // MongoDB store for session persistence
+  const sessionStore = MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
+    collectionName: 'sessions',
+    ttl: 24 * 60 * 60, // 1 day
+    autoRemove: 'native'
+  });
+
+  // Session configuration
   app.use(session({
     secret: process.env.REPL_ID || 'roomcraft-secret',
     name: 'roomcraft.sid',
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
-      collectionName: 'sessions',
-      ttl: 24 * 60 * 60, // 1 day
-      autoRemove: 'native'
-    }),
+    store: sessionStore,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
@@ -30,6 +33,7 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Passport local strategy
   passport.use(new LocalStrategy(async (username, password, done) => {
     try {
       const user = await User.findOne({ email: username });
@@ -42,23 +46,23 @@ export function setupAuth(app: Express) {
         return done(null, false);
       }
 
-      const userForSession = {
+      return done(null, {
         id: user._id.toString(),
         email: user.email,
         username: user.email,
         credits: user.credits
-      };
-
-      return done(null, userForSession);
+      });
     } catch (err) {
       return done(err);
     }
   }));
 
-  passport.serializeUser((user: any, done) => {
+  // Session serialization
+  passport.serializeUser((user: Express.User, done) => {
     done(null, user.id);
   });
 
+  // Session deserialization
   passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await User.findById(id);
@@ -77,6 +81,7 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Auth routes
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
       if (err) {
@@ -89,8 +94,6 @@ export function setupAuth(app: Express) {
         if (err) {
           return next(err);
         }
-        // Set a custom header to help debug session creation
-        res.setHeader('X-Session-Created', 'true');
         res.json(user);
       });
     })(req, res, next);
@@ -101,14 +104,17 @@ export function setupAuth(app: Express) {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
       }
-      res.json({ message: "Logged out successfully" });
+      req.session.destroy((err) => {
+        if (err) {
+          return res.status(500).json({ message: "Session destruction failed" });
+        }
+        res.clearCookie('roomcraft.sid');
+        res.json({ message: "Logged out successfully" });
+      });
     });
   });
 
   app.get("/api/user", (req, res) => {
-    // Set a custom header to help debug session persistence
-    res.setHeader('X-Session-Present', req.isAuthenticated() ? 'true' : 'false');
-
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
