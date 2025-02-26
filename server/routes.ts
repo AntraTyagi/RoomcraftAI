@@ -89,8 +89,17 @@ export function registerRoutes(app: Express): Server {
       try {
         await deductUserCredits(req.user.id, 'generate');
         console.log("Credits successfully deducted for generation");
-        //Refresh credit balance after deduction
-        await axios.get(`/api/credits/balance`, { headers: { Authorization: req.headers.authorization } });
+
+        // Refresh credit balance
+        const protocol = req.protocol;
+        const host = req.get('host');
+        const baseUrl = `${protocol}://${host}`;
+        console.log("Making request to refresh credits at:", `${baseUrl}/api/credits/balance`);
+        await axios.get(`${baseUrl}/api/credits/balance`, { 
+          headers: { 
+            Authorization: req.headers.authorization 
+          }
+        });
 
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
@@ -134,8 +143,16 @@ export function registerRoutes(app: Express): Server {
       try {
         await deductUserCredits(req.user.id, 'inpaint');
         console.log("Credits successfully deducted for inpainting");
-        //Refresh credit balance after deduction
-        await axios.get(`/api/credits/balance`, { headers: { Authorization: req.headers.authorization } });
+
+        // Refresh credit balance
+        const protocol = req.protocol;
+        const host = req.get('host');
+        const baseUrl = `${protocol}://${host}`;
+        await axios.get(`${baseUrl}/api/credits/balance`, { 
+          headers: { 
+            Authorization: req.headers.authorization 
+          }
+        });
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
         return res.status(403).json({ message: error.message || "Credit deduction failed" });
