@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import Generate from "@/pages/generate";
 import AuthPage from "@/pages/auth-page";
 import VirtualStaging from "@/pages/virtual-staging";
+import Account from "@/pages/account";
 import Layout from "@/components/layout";
 import { AuthProvider } from "@/hooks/use-auth";
 
@@ -18,6 +19,7 @@ function Router() {
         <Route path="/generate" component={Generate} />
         <Route path="/virtual-staging" component={VirtualStaging} />
         <Route path="/auth" component={AuthPage} />
+        <Route path="/account" component={Account} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
