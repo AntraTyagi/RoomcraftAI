@@ -19,7 +19,8 @@ export default function AccountPage() {
         credentials: 'include', // Include cookies for authentication
       });
       if (!response.ok) {
-        throw new Error("Failed to add credits");
+        const error = await response.json();
+        throw new Error(error.message || "Failed to add credits");
       }
       return response.json();
     },
