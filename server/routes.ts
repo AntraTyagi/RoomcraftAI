@@ -36,28 +36,39 @@ export function registerRoutes(app: Express): Server {
   const deductUserCredits = async (userId: string, operationType: 'generate' | 'inpaint') => {
     try {
       // Check user credits first
-      const user = await User.findById(userId).select('credits');
+      console.log(`Checking credits for user ${userId}`);
+      const user = await User.findById(userId);
       if (!user) {
         throw new Error("User not found");
       }
+      console.log(`Current credits: ${user.credits}`);
+
       if (user.credits <= 0) {
         throw new Error("Insufficient credits");
       }
 
-      // Record credit usage and update user credits atomically
-      await Promise.all([
-        CreditHistory.create({
-          userId,
-          operationType,
-          description: `${operationType === 'generate' ? 'Design generation' : 'Inpainting operation'}`,
-          creditsUsed: 1
-        }),
-        User.findByIdAndUpdate(userId, { $inc: { credits: -1 } })
-      ]);
+      // Record credit usage
+      console.log(`Creating credit history record for ${operationType}`);
+      const creditHistory = await CreditHistory.create({
+        userId,
+        operationType,
+        description: `${operationType === 'generate' ? 'Design generation' : 'Inpainting operation'}`,
+        creditsUsed: 1
+      });
+      console.log(`Credit history created: ${creditHistory._id}`);
+
+      // Update user credits atomically
+      console.log(`Updating user credits from ${user.credits} to ${user.credits - 1}`);
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $inc: { credits: -1 } },
+        { new: true }
+      );
+      console.log(`Updated user credits: ${updatedUser?.credits}`);
 
       return true;
     } catch (error) {
-      console.error(`Error in credit deduction:`, error);
+      console.error(`Error in credit deduction for user ${userId}:`, error);
       throw error;
     }
   };
@@ -100,11 +111,10 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Check and deduct credits
+      // Check and deduct credits first
       try {
-        console.log("Checking credits for user:", req.user.id);
         await deductUserCredits(req.user.id, 'generate');
-        console.log("Credits deducted successfully");
+        console.log("Credits successfully deducted for generation");
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
         return res.status(403).json({ message: error.message || "Credit deduction failed" });
@@ -143,8 +153,14 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Deduct credits before inpainting
-      await deductUserCredits(req.user.id, 'inpaint');
+      // Deduct credits first
+      try {
+        await deductUserCredits(req.user.id, 'inpaint');
+        console.log("Credits successfully deducted for inpainting");
+      } catch (error: any) {
+        console.error("Credit deduction failed:", error);
+        return res.status(403).json({ message: error.message || "Credit deduction failed" });
+      }
 
       const inpaintedImage = await inpaintFurniture(image, mask, prompt);
       res.json({ inpaintedImage });
