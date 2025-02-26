@@ -16,13 +16,15 @@ export function setupAuth(app: Express) {
       secure: false,
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      path: '/'
     },
     store: new MemoryStore({
       checkPeriod: 86400000 // 24 hours
     }),
   };
 
+  // Session must be set up before passport
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
@@ -35,8 +37,8 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Incorrect username." });
         }
 
-        const isMatch = await user.comparePassword(password);
-        if (!isMatch) {
+        const isValidPassword = await user.comparePassword(password);
+        if (!isValidPassword) {
           return done(null, false, { message: "Incorrect password." });
         }
 

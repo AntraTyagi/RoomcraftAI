@@ -2,23 +2,24 @@ import { Request, Response, NextFunction } from 'express';
 import { User } from '../models/User';
 import jwt from 'jsonwebtoken';
 
+declare global {
+  namespace Express {
+    interface User {
+      id: string;
+      email: string;
+      username: string;
+      credits: number;
+    }
+  }
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-export interface UserPayload {
-  id: string;
-  email: string;
-  username: string;
-  credits: number;
-}
-
-export interface AuthRequest extends Request {
-  user?: UserPayload;
-}
-
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  console.log("Auth middleware - session ID:", req.sessionID);
   console.log("Auth middleware - isAuthenticated:", req.isAuthenticated());
-  console.log("Auth middleware - session:", req.session);
   console.log("Auth middleware - user:", req.user);
+  console.log("Auth middleware - cookies:", req.headers.cookie);
 
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: 'Authentication required' });
