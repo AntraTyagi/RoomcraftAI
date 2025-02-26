@@ -22,8 +22,12 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
   console.log("Auth middleware - cookies:", req.headers.cookie);
 
   if (!req.isAuthenticated()) {
+    console.log("Not authenticated - sending 401");
     return res.status(401).json({ message: 'Authentication required' });
   }
+
+  // If we get here, user is authenticated
+  console.log("User is authenticated, proceeding to next middleware");
   next();
 };
 

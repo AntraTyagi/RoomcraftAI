@@ -34,21 +34,26 @@ export function setupAuth(app: Express) {
       try {
         const user = await User.findOne({ email: username });
         if (!user) {
+          console.log("User not found:", username);
           return done(null, false, { message: "Incorrect username." });
         }
 
         const isValidPassword = await user.comparePassword(password);
         if (!isValidPassword) {
+          console.log("Invalid password for user:", username);
           return done(null, false, { message: "Incorrect password." });
         }
 
-        return done(null, {
+        const userForSession = {
           id: user._id.toString(),
           email: user.email,
           username: user.email,
           credits: user.credits
-        });
+        };
+        console.log("Authentication successful, user:", userForSession);
+        return done(null, userForSession);
       } catch (err) {
+        console.error("Authentication error:", err);
         return done(err);
       }
     })
@@ -89,6 +94,7 @@ export function setupAuth(app: Express) {
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
       if (err) {
+        console.error("Logout error:", err);
         return res.status(500).send("Logout failed");
       }
       res.json({ message: "Logout successful" });
