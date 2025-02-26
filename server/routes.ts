@@ -8,23 +8,34 @@ import { CreditHistory } from "./models/CreditHistory";
 import { authMiddleware } from "./middleware/auth";
 import { connectDB } from "./lib/mongodb";
 
+declare global {
+  namespace Express {
+    interface User {
+      id: string;
+      email: string;
+      username: string;
+      credits: number;
+    }
+  }
+}
+
 export function registerRoutes(app: Express): Server {
-  // Connect to MongoDB and set up auth - do this first
+  // 1. Connect to MongoDB first
   connectDB();
+
+  // 2. Set up authentication - this adds session and passport middleware
   setupAuth(app);
 
-  // Middleware to check user credits
+  // 3. Protected routes middleware
   const checkCredits = async (req: any, res: any, next: any) => {
     try {
       const user = await User.findById(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-
       if (user.credits <= 0) {
         return res.status(403).json({ message: "Insufficient credits" });
       }
-
       next();
     } catch (error) {
       console.error("Credits check error:", error);
@@ -32,13 +43,12 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
-  // Get credit history
+  // 4. Protected API routes
   app.get("/api/credits/history", authMiddleware, async (req: any, res) => {
     try {
       const history = await CreditHistory.find({ userId: req.user.id })
         .sort({ timestamp: -1 })
         .limit(50);
-
       res.json({ history });
     } catch (error) {
       console.error("Error fetching credit history:", error);
@@ -46,14 +56,12 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get current credit balance
   app.get("/api/credits/balance", authMiddleware, async (req: any, res) => {
     try {
       const user = await User.findById(req.user.id).select('credits');
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-
       res.json({ credits: user.credits });
     } catch (error) {
       console.error("Error fetching credit balance:", error);

@@ -5,68 +5,48 @@ import session from "express-session";
 import MongoStore from 'connect-mongo';
 import { User } from "./models/User";
 
+declare global {
+  namespace Express {
+    interface User {
+      id: string;
+      email: string;
+      username: string;
+      credits: number;
+    }
+  }
+}
+
 export function setupAuth(app: Express) {
-  // Ensure MongoDB connection string is correct
-  const mongoUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft';
-  console.log('MongoDB URL for session store:', mongoUrl);
-
-  // MongoDB store for session persistence with detailed logging
-  const sessionStore = MongoStore.create({
-    mongoUrl,
-    collectionName: 'sessions',
-    ttl: 24 * 60 * 60, // 1 day
-    touchAfter: 24 * 3600, // time period in seconds between session updates
-    crypto: {
-      secret: false
-    },
-    stringify: false,
-    autoRemove: 'native'
-  });
-
-  // Session store event logging
-  sessionStore.on('create', (sessionId) => {
-    console.log('Session created:', sessionId);
-  });
-
-  sessionStore.on('set', (sessionId) => {
-    console.log('Session updated:', sessionId);
-  });
-
-  sessionStore.on('destroy', (sessionId) => {
-    console.log('Session destroyed:', sessionId);
-  });
-
-  // Session middleware configuration
+  // 1. Configure session middleware first
   app.use(session({
     secret: process.env.REPL_ID || 'roomcraft-secret',
     name: 'roomcraft.sid',
-    store: sessionStore,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
+      collectionName: 'sessions'
+    }),
     resave: false,
-    rolling: true,
     saveUninitialized: false,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
       secure: false, // Must be false for HTTP
-      sameSite: 'lax',
-      path: '/'
+      path: '/',
+      sameSite: 'lax'
     }
   }));
 
+  // 2. Initialize passport and session AFTER session middleware
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Debug middleware to log every request's session state
+  // 3. Debug middleware after all auth setup
   app.use((req, res, next) => {
     console.log('\n=== Request Debug ===');
-    console.log('URL:', req.url);
-    console.log('Method:', req.method);
     console.log('Session ID:', req.sessionID);
-    console.log('Cookie Header:', req.headers.cookie);
-    console.log('Is Authenticated:', req.isAuthenticated());
     console.log('Session:', req.session);
+    console.log('Is Authenticated:', req.isAuthenticated());
     console.log('User:', req.user);
-    console.log('===================\n');
     next();
   });
 
@@ -102,7 +82,7 @@ export function setupAuth(app: Express) {
     }
   }));
 
-  passport.serializeUser((user: Express.User, done) => {
+  passport.serializeUser((user, done) => {
     console.log('Serializing user:', user);
     done(null, user.id);
   });
@@ -134,8 +114,6 @@ export function setupAuth(app: Express) {
 
   app.post("/api/login", (req, res, next) => {
     console.log('Login request received');
-    console.log('Headers:', req.headers);
-
     passport.authenticate("local", (err, user, info) => {
       if (err) {
         console.error('Login error:', err);
@@ -152,38 +130,25 @@ export function setupAuth(app: Express) {
           console.error('Login error:', err);
           return next(err);
         }
-
-        console.log('Login successful:');
-        console.log('- Session:', req.session);
-        console.log('- User:', req.user);
-        console.log('- Cookies:', res.getHeader('set-cookie'));
-
+        console.log('Login successful - Session:', req.session);
         res.json(user);
       });
     })(req, res, next);
   });
 
   app.post("/api/logout", (req, res) => {
-    console.log('Logout request');
-    console.log('Session before logout:', req.session);
-
-    req.logout((err) => {
-      if (err) {
-        console.error('Logout error:', err);
-        return res.status(500).json({ message: "Logout failed" });
-      }
-
+    if (req.session) {
       req.session.destroy((err) => {
         if (err) {
           console.error('Session destruction error:', err);
-          return res.status(500).json({ message: "Session destruction failed" });
+          return res.status(500).json({ message: "Logout failed" });
         }
-
-        console.log('Session destroyed successfully');
-        res.clearCookie('roomcraft.sid');
+        res.clearCookie('roomcraft.sid', { path: '/' });
         res.json({ message: "Logged out successfully" });
       });
-    });
+    } else {
+      res.json({ message: "Already logged out" });
+    }
   });
 
   app.get("/api/user", (req, res) => {
@@ -191,7 +156,6 @@ export function setupAuth(app: Express) {
     console.log('Session:', req.session);
     console.log('Is Authenticated:', req.isAuthenticated());
     console.log('User:', req.user);
-    console.log('================\n');
 
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
