@@ -10,8 +10,9 @@ import DesignGallery from "@/components/design-gallery";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { COLOR_THEMES, type ColorTheme } from "@/constants/color-themes";
+import { COLOR_THEMES } from "@/constants/color-themes";
 import { Badge } from "@/components/ui/badge";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Generate() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -24,31 +25,26 @@ export default function Generate() {
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image: uploadedImage,
-          style: selectedStyle,
-          roomType: selectedRoom,
-          colorTheme: selectedTheme,
-          prompt,
-        }),
+      const res = await apiRequest("POST", "/api/generate", {
+        image: uploadedImage,
+        style: selectedStyle,
+        roomType: selectedRoom,
+        colorTheme: selectedTheme,
+        prompt,
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate designs");
-      }
-
-      return response.json();
+      return res.json();
     },
     onSuccess: (data) => {
       setGeneratedDesigns(data.designs);
+      toast({
+        title: "Success",
+        description: "Designs generated successfully!",
+      });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to generate designs. Please try again.",
+        description: error.message || "Failed to generate designs. Please try again.",
         variant: "destructive",
       });
     },
