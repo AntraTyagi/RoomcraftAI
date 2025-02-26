@@ -49,7 +49,7 @@ export function setupAuth(app: Express) {
       const userForToken = {
         id: user._id.toString(),
         email: user.email,
-        username: user.username, // Corrected to use user.username
+        username: user.username, 
         name: user.name,
         credits: user.credits
       };
@@ -70,24 +70,22 @@ export function setupAuth(app: Express) {
         username: req.body.username 
       });
 
-      const { email, password, name, username } = req.body;
+      const { email, password, name } = req.body;
 
-      if (!email || !password || !name || !username) {
+      if (!email || !password || !name) {
         console.log("Missing required fields");
         return res.status(400).json({ message: "All fields are required" });
       }
 
       // Check if user already exists
       const existingUser = await User.findOne({ 
-        $or: [{ email }, { username }] 
+        $or: [{ email }] 
       });
 
       if (existingUser) {
         console.log("User already exists:", existingUser.email);
         return res.status(400).json({ 
-          message: existingUser.email === email 
-            ? "Email already registered" 
-            : "Username already taken" 
+          message: "Email already registered"
         });
       }
 
@@ -100,10 +98,10 @@ export function setupAuth(app: Express) {
         email,
         password,
         name,
-        username,
+        username: email, 
         verificationToken: token,
         verificationTokenExpires: expires,
-        isEmailVerified: true // Temporarily set to true for testing
+        isEmailVerified: true 
       });
 
       console.log("Attempting to save new user");
@@ -115,14 +113,14 @@ export function setupAuth(app: Express) {
         token: jwt.sign({
           id: user._id.toString(),
           email: user.email,
-          username: user.username, //Corrected to use user.username
+          username: user.email,
           name: user.name,
           credits: user.credits
         }, JWT_SECRET, { expiresIn: '24h' }),
         user: {
           id: user._id.toString(),
           email: user.email,
-          username: user.username,  //Corrected to use user.username
+          username: user.email,
           name: user.name,
           credits: user.credits
         }
@@ -157,7 +155,7 @@ export function setupAuth(app: Express) {
         user: {
           id: user.id,
           email: user.email,
-          username: user.username,
+          username: user.email,
           name: user.name,
           credits: user.credits
         }

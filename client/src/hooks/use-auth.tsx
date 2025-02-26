@@ -11,11 +11,13 @@ import { useToast } from "@/hooks/use-toast";
 interface User {
   id: string;
   username: string;
+  email: string;
+  name: string;
   credits: number;
 }
 
 interface LoginData {
-  username: string;
+  email: string;
   password: string;
 }
 
@@ -53,7 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchOnReconnect: true,
   });
 
-  // Function to refresh user credits
   const refreshCredits = async () => {
     console.log("Refreshing user credits...");
     try {
@@ -61,7 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       console.log("New credit balance:", data.credits);
 
-      // Update the user data in the cache
       if (user) {
         const updatedUser = {
           ...user,
@@ -89,11 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
-      // Refresh credits immediately after login
       refreshCredits();
+      const firstName = data.user.name.split(' ')[0];
       toast({
         title: "Login successful",
-        description: `Welcome back, ${data.user.username}!`,
+        description: `Welcome back, ${firstName}!`,
       });
     },
     onError: (error: Error) => {
@@ -128,16 +128,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/register", { ...credentials, credits: 10 });
+      const res = await apiRequest("POST", "/api/register", credentials);
       const data = await res.json();
       return data;
     },
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
+      const firstName = data.user.name.split(' ')[0];
       toast({
         title: "Registration successful",
-        description: `Welcome, ${data.user.username}! You've received 10 free credits.`,
+        description: `Welcome, ${firstName}! You've received 10 free credits.`,
       });
     },
     onError: (error: Error) => {
