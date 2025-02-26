@@ -42,6 +42,7 @@ export default function Generate() {
     },
     onSuccess: (data) => {
       setGeneratedDesigns(data.designs);
+      refreshCredits(); 
       toast({
         title: "Success",
         description: "Designs generated successfully!",

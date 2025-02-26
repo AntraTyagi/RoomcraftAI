@@ -185,6 +185,7 @@ export default function VirtualStaging() {
     },
     onSuccess: (data) => {
       setStagedImage(data.inpaintedImage);
+      refreshCredits();
       toast({
         title: "Success",
         description: `Furniture ${operation === "remove" ? "removal" : "replacement"} completed successfully`,

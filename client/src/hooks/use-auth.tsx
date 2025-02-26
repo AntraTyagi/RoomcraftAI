@@ -3,6 +3,7 @@ import {
   useQuery,
   useMutation,
   UseMutationResult,
+  useQueryClient,
 } from "@tanstack/react-query";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -30,17 +31,20 @@ type AuthContextType = {
   loginMutation: UseMutationResult<LoginResponse, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<LoginResponse, Error, LoginData>;
+  refreshCredits: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const {
     data: user,
     error,
     isLoading,
+    refetch,
   } = useQuery<User>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -49,6 +53,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
+
+  // Function to refresh user credits
+  const refreshCredits = async () => {
+    console.log("Refreshing user credits...");
+    try {
+      const response = await apiRequest("GET", "/api/credits/balance");
+      const data = await response.json();
+      console.log("New credit balance:", data.credits);
+
+      // Update the user data in the cache with new credits
+      if (user) {
+        queryClient.setQueryData(["/api/user"], {
+          ...user,
+          credits: data.credits,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to refresh credits:", error);
+    }
+  };
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
@@ -126,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        refreshCredits,
       }}
     >
       {children}
