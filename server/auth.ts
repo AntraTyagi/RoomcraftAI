@@ -34,13 +34,11 @@ export function setupAuth(app: Express) {
       try {
         const user = await User.findOne({ email: username });
         if (!user) {
-          console.log("User not found:", username);
           return done(null, false, { message: "Incorrect username." });
         }
 
         const isValidPassword = await user.comparePassword(password);
         if (!isValidPassword) {
-          console.log("Invalid password for user:", username);
           return done(null, false, { message: "Incorrect password." });
         }
 
@@ -50,26 +48,21 @@ export function setupAuth(app: Express) {
           username: user.email,
           credits: user.credits
         };
-        console.log("Authentication successful, user:", userForSession);
         return done(null, userForSession);
       } catch (err) {
-        console.error("Authentication error:", err);
         return done(err);
       }
     })
   );
 
   passport.serializeUser((user: any, done) => {
-    console.log('Serializing user:', user);
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: string, done) => {
-    console.log('Deserializing user id:', id);
     try {
       const user = await User.findById(id);
       if (!user) {
-        console.log('User not found during deserialization');
         return done(null, false);
       }
       const userData = {
@@ -78,23 +71,19 @@ export function setupAuth(app: Express) {
         username: user.email,
         credits: user.credits
       };
-      console.log('Deserialized user:', userData);
       done(null, userData);
     } catch (err) {
-      console.error('Deserialization error:', err);
       done(err);
     }
   });
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    console.log("Login successful, user:", req.user);
     res.json(req.user);
   });
 
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
       if (err) {
-        console.error("Logout error:", err);
         return res.status(500).send("Logout failed");
       }
       res.json({ message: "Logout successful" });
@@ -102,10 +91,6 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    console.log("User check - session:", req.session);
-    console.log("User check - isAuthenticated:", req.isAuthenticated());
-    console.log("User check - user:", req.user);
-
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not logged in");
     }
