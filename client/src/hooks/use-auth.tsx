@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext } from "react";
+import { ReactNode, createContext, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -44,7 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-    refetch,
   } = useQuery<User>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -90,6 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
+      // Refresh credits immediately after login
+      refreshCredits();
       toast({
         title: "Login successful",
         description: `Welcome back, ${data.user.username}!`,
@@ -147,6 +148,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
+
+  useEffect(() => {
+    if (user) {
+      refreshCredits();
+    }
+  }, [user?.id]);
 
   return (
     <AuthContext.Provider

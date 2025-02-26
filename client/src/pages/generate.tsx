@@ -54,6 +54,8 @@ export default function Generate() {
         description: error.message || "Failed to generate designs. Please try again.",
         variant: "destructive",
       });
+      // Refresh credits even on error to ensure accurate display
+      refreshCredits();
     },
   });
 

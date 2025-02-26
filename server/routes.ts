@@ -7,30 +7,14 @@ import { User } from "./models/User";
 import { CreditHistory } from "./models/CreditHistory";
 import { authMiddleware } from "./middleware/auth";
 import { connectDB } from "./lib/mongodb";
+import axios from 'axios'; // Added import for axios
 
 export function registerRoutes(app: Express): Server {
   // 1. Connect to MongoDB first
   connectDB();
 
-  // 2. Set up authentication - this adds JWT auth setup
+  // 2. Set up authentication
   setupAuth(app);
-
-  // 3. Protected routes middleware
-  const checkCredits = async (req: any, res: any, next: any) => {
-    try {
-      const user = await User.findById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      if (user.credits <= 0) {
-        return res.status(403).json({ message: "Insufficient credits" });
-      }
-      next();
-    } catch (error) {
-      console.error("Credits check error:", error);
-      res.status(500).json({ message: "Error checking credits" });
-    }
-  };
 
   // Helper function to handle credit deduction
   const deductUserCredits = async (userId: string, operationType: 'generate' | 'inpaint') => {
@@ -73,23 +57,10 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
-  // 4. Protected API routes - ensure authMiddleware is used for all protected routes
-  app.get("/api/credits/history", authMiddleware, async (req: any, res) => {
-    try {
-      const history = await CreditHistory.find({ userId: req.user.id })
-        .sort({ timestamp: -1 })
-        .limit(50);
-      res.json({ history });
-    } catch (error) {
-      console.error("Error fetching credit history:", error);
-      res.status(500).json({ message: "Error fetching credit history" });
-    }
-  });
-
   app.get("/api/credits/balance", authMiddleware, async (req: any, res) => {
     try {
       console.log("Fetching credit balance for user:", req.user.id);
-      const user = await User.findById(req.user.id).select('credits');
+      const user = await User.findById(req.user.id);
       if (!user) {
         console.log("User not found when fetching credits");
         return res.status(404).json({ message: "User not found" });
@@ -118,6 +89,9 @@ export function registerRoutes(app: Express): Server {
       try {
         await deductUserCredits(req.user.id, 'generate');
         console.log("Credits successfully deducted for generation");
+        //Refresh credit balance after deduction
+        await axios.get(`/api/credits/balance`, { headers: { Authorization: req.headers.authorization } });
+
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
         return res.status(403).json({ message: error.message || "Credit deduction failed" });
@@ -160,6 +134,8 @@ export function registerRoutes(app: Express): Server {
       try {
         await deductUserCredits(req.user.id, 'inpaint');
         console.log("Credits successfully deducted for inpainting");
+        //Refresh credit balance after deduction
+        await axios.get(`/api/credits/balance`, { headers: { Authorization: req.headers.authorization } });
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
         return res.status(403).json({ message: error.message || "Credit deduction failed" });
