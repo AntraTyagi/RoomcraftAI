@@ -46,9 +46,10 @@ export function setupAuth(app: Express) {
         return done(null, false, { message: "Invalid credentials" });
       }
 
-      if (!user.isEmailVerified) {
-        return done(null, false, { message: "Please verify your email before logging in" });
-      }
+      // Temporarily disable email verification check
+      // if (!user.isEmailVerified) {
+      //   return done(null, false, { message: "Please verify your email before logging in" });
+      // }
 
       const userForToken = {
         id: user._id.toString(),
@@ -106,31 +107,31 @@ export function setupAuth(app: Express) {
         name,
         username,
         verificationToken: token,
-        verificationTokenExpires: expires
+        verificationTokenExpires: expires,
+        isEmailVerified: true // Temporarily set to true for testing
       });
 
       console.log("Attempting to save new user");
       await user.save();
       console.log("User saved successfully:", user._id);
 
-      try {
-        // Send verification email
-        console.log("Attempting to send verification email");
-        await sendVerificationEmail(email, name, token);
-        console.log("Verification email sent successfully");
+      // Temporarily skip email verification
+      res.status(201).json({ 
+        message: "Registration successful. You can now log in." 
+      });
 
-        res.status(201).json({ 
-          message: "Registration successful. Please check your email to verify your account." 
-        });
-      } catch (emailError) {
-        // If email sending fails, delete the user and return error
-        console.error("Failed to send verification email:", emailError);
-        await User.findByIdAndDelete(user._id);
-
-        res.status(500).json({ 
-          message: "Failed to send verification email. Please try again later." 
-        });
-      }
+      // Comment out email sending temporarily
+      // try {
+      //   console.log("Attempting to send verification email");
+      //   await sendVerificationEmail(email, name, token);
+      //   console.log("Verification email sent successfully");
+      // } catch (emailError) {
+      //   console.error("Failed to send verification email:", emailError);
+      //   await User.findByIdAndDelete(user._id);
+      //   res.status(500).json({ 
+      //     message: "Failed to send verification email. Please try again later." 
+      //   });
+      // }
     } catch (error: any) {
       console.error('Registration error:', error);
       res.status(500).json({ 

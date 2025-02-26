@@ -3,11 +3,9 @@ import crypto from 'crypto';
 
 console.log("Setting up email transporter with Gmail credentials");
 
-// Create transporter with explicitly defined SMTP configuration
+// Create transporter with simpler Gmail configuration
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // use SSL
+  service: 'Gmail',
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD
