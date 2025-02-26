@@ -8,22 +8,11 @@ import { CreditHistory } from "./models/CreditHistory";
 import { authMiddleware } from "./middleware/auth";
 import { connectDB } from "./lib/mongodb";
 
-declare global {
-  namespace Express {
-    interface User {
-      id: string;
-      email: string;
-      username: string;
-      credits: number;
-    }
-  }
-}
-
 export function registerRoutes(app: Express): Server {
   // 1. Connect to MongoDB first
   connectDB();
 
-  // 2. Set up authentication - this adds session and passport middleware
+  // 2. Set up authentication - this adds JWT auth setup
   setupAuth(app);
 
   // 3. Protected routes middleware

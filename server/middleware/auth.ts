@@ -1,4 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
 declare global {
   namespace Express {
@@ -12,8 +15,19 @@ declare global {
 }
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.isAuthenticated()) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'Authentication required' });
   }
-  next();
+
+  try {
+    const token = authHeader.split(' ')[1];
+    const user = jwt.verify(token, JWT_SECRET) as Express.User;
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return res.status(401).json({ message: 'Invalid token' });
+  }
 };
