@@ -10,12 +10,13 @@ export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPL_ID || "porygon-supremacy",
-    resave: false,
-    saveUninitialized: false,
+    resave: true, // Changed to true to ensure session is saved
+    saveUninitialized: true, // Changed to true to ensure session is saved
     name: 'roomcraft.sid',
     cookie: {
-      secure: false, // Set to true in production with HTTPS
+      secure: false, // Must be false for HTTP
       httpOnly: true,
+      sameSite: 'lax', // Added sameSite option
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     },
     store: new MemoryStore({
@@ -74,9 +75,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ message: "Authentication failed" });
-    }
+    console.log("Login successful, user:", req.user); // Added logging
     res.json(req.user);
   });
 
@@ -90,6 +89,8 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
+    console.log("User check, session:", req.session); // Added logging
+    console.log("User check, authenticated:", req.isAuthenticated()); // Added logging
     if (!req.user) {
       return res.status(401).send("Not logged in");
     }
