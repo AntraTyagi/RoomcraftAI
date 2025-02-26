@@ -16,9 +16,9 @@ export interface AuthRequest extends Request {
 }
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  console.log("Auth middleware - isAuthenticated:", req.isAuthenticated()); // Added logging
-  console.log("Auth middleware - session:", req.session); // Added logging
-  console.log("Auth middleware - user:", req.user); // Added logging
+  console.log("Auth middleware - isAuthenticated:", req.isAuthenticated());
+  console.log("Auth middleware - session:", req.session);
+  console.log("Auth middleware - user:", req.user);
 
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: 'Authentication required' });

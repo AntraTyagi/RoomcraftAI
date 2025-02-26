@@ -98,7 +98,7 @@ export function setupAuth(app: Express) {
     console.log("User check - isAuthenticated:", req.isAuthenticated());
     console.log("User check - user:", req.user);
 
-    if (!req.user) {
+    if (!req.isAuthenticated()) {
       return res.status(401).send("Not logged in");
     }
     res.json(req.user);

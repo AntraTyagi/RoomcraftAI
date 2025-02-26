@@ -9,21 +9,13 @@ import { authMiddleware } from "./middleware/auth";
 import { connectDB } from "./lib/mongodb";
 
 export function registerRoutes(app: Express): Server {
-  // Connect to MongoDB and set up auth
+  // Connect to MongoDB and set up auth - do this first
   connectDB();
   setupAuth(app);
 
   // Middleware to check user credits
   const checkCredits = async (req: any, res: any, next: any) => {
     try {
-      console.log('Check credits - session:', req.session);
-      console.log('Check credits - isAuthenticated:', req.isAuthenticated());
-      console.log('Check credits - user:', req.user);
-
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
       const user = await User.findById(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -116,7 +108,40 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Protected route with credit check for inpainting
+  // Protected route for generation
+  app.post("/api/generate", authMiddleware, checkCredits, async (req: any, res) => {
+    try {
+      const { image, style, roomType, colorTheme, prompt } = req.body;
+
+      if (!image || !style) {
+        return res.status(400).json({
+          message: "Image and style are required",
+        });
+      }
+
+      const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
+
+      // Record credit usage and update user credits
+      await Promise.all([
+        CreditHistory.create({
+          userId: req.user.id,
+          operationType: 'generate',
+          description: 'Design generation',
+          creditsUsed: 1
+        }),
+        User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } })
+      ]);
+
+      res.json({ designs });
+    } catch (error) {
+      console.error("Generate error:", error);
+      res.status(500).json({
+        message: "Failed to generate designs",
+      });
+    }
+  });
+
+  // Protected route for inpainting
   app.post("/api/inpaint", authMiddleware, checkCredits, async (req: any, res) => {
     try {
       const { image, mask, prompt } = req.body;
@@ -129,75 +154,22 @@ export function registerRoutes(app: Express): Server {
 
       const inpaintedImage = await inpaintFurniture(image, mask, prompt);
 
-      // Record credit usage
-      if (req.user) {
-        await CreditHistory.create({
+      // Record credit usage and update user credits
+      await Promise.all([
+        CreditHistory.create({
           userId: req.user.id,
           operationType: 'inpaint',
           description: 'Inpainting operation',
           creditsUsed: 1
-        });
-
-        // Deduct credit after successful operation
-        await User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } });
-      }
+        }),
+        User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } })
+      ]);
 
       res.json({ inpaintedImage });
     } catch (error: any) {
       console.error("Inpainting error:", error);
       res.status(500).json({
         message: error.message || "Failed to inpaint image",
-      });
-    }
-  });
-
-  // Protected route for generation
-  app.post("/api/generate", async (req: any, res) => {
-    try {
-      console.log('Generate - session:', req.session);
-      console.log('Generate - isAuthenticated:', req.isAuthenticated());
-      console.log('Generate - user:', req.user);
-
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      // Check credits
-      const user = await User.findById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      if (user.credits <= 0) {
-        return res.status(403).json({ message: "Insufficient credits" });
-      }
-
-      const { image, style, roomType, colorTheme, prompt } = req.body;
-
-      if (!image || !style) {
-        return res.status(400).json({
-          message: "Image and style are required",
-        });
-      }
-
-      const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
-
-      // Record credit usage
-      await CreditHistory.create({
-        userId: req.user.id,
-        operationType: 'generate',
-        description: 'Design generation',
-        creditsUsed: 1
-      });
-
-      // Deduct credit after successful operation
-      await User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } });
-
-      res.json({ designs });
-    } catch (error) {
-      console.error("Generate error:", error);
-      res.status(500).json({
-        message: "Failed to generate designs",
       });
     }
   });
