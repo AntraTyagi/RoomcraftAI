@@ -55,11 +55,11 @@ export function registerRoutes(app: Express): Server {
   // Middleware to check user credits
   const checkCredits = async (req: any, res: any, next: any) => {
     try {
-      if (!req.session?.user) {
+      if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const user = await User.findById(req.session.user.id);
+      const user = await User.findById(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -70,6 +70,7 @@ export function registerRoutes(app: Express): Server {
 
       next();
     } catch (error) {
+      console.error("Credits check error:", error);
       res.status(500).json({ message: "Error checking credits" });
     }
   };
@@ -149,10 +150,6 @@ export function registerRoutes(app: Express): Server {
   // Protected route with credit check for generation
   app.post("/api/generate", authMiddleware, checkCredits, async (req: any, res) => {
     try {
-      if (!req.session?.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
       const { image, style, roomType, colorTheme, prompt } = req.body;
 
       if (!image || !style) {
@@ -164,16 +161,16 @@ export function registerRoutes(app: Express): Server {
       const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
 
       // Record credit usage
-      if (req.session.user) {
+      if (req.user) {
         await CreditHistory.create({
-          userId: req.session.user.id,
+          userId: req.user.id,
           operationType: 'generate',
           description: 'Design generation',
           creditsUsed: 1
         });
 
         // Deduct credit after successful operation
-        await User.findByIdAndUpdate(req.session.user.id, { $inc: { credits: -1 } });
+        await User.findByIdAndUpdate(req.user.id, { $inc: { credits: -1 } });
       }
 
       res.json({ designs });

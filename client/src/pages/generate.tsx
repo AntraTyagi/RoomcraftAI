@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { COLOR_THEMES } from "@/constants/color-themes";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Generate() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -22,9 +23,14 @@ export default function Generate() {
   const [prompt, setPrompt] = useState("");
   const [generatedDesigns, setGeneratedDesigns] = useState<string[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const generateMutation = useMutation({
     mutationFn: async () => {
+      if (!user) {
+        throw new Error("Please login to generate designs");
+      }
+
       const res = await apiRequest("POST", "/api/generate", {
         image: uploadedImage,
         style: selectedStyle,
