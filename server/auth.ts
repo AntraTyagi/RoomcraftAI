@@ -1,54 +1,14 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
-import session from "express-session";
-import MongoStore from 'connect-mongo';
+import jwt from 'jsonwebtoken';
 import { User } from "./models/User";
 
-declare global {
-  namespace Express {
-    interface User {
-      id: string;
-      email: string;
-      username: string;
-      credits: number;
-    }
-  }
-}
+const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
 export function setupAuth(app: Express) {
-  // 1. Configure session middleware first
-  app.use(session({
-    secret: process.env.REPL_ID || 'roomcraft-secret',
-    name: 'roomcraft.sid',
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
-      collectionName: 'sessions'
-    }),
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      httpOnly: true,
-      secure: false, // Must be false for HTTP
-      path: '/',
-      sameSite: 'lax'
-    }
-  }));
-
-  // 2. Initialize passport and session AFTER session middleware
+  // Initialize passport for the initial authentication
   app.use(passport.initialize());
-  app.use(passport.session());
-
-  // 3. Debug middleware after all auth setup
-  app.use((req, res, next) => {
-    console.log('\n=== Request Debug ===');
-    console.log('Session ID:', req.sessionID);
-    console.log('Session:', req.session);
-    console.log('Is Authenticated:', req.isAuthenticated());
-    console.log('User:', req.user);
-    next();
-  });
 
   passport.use(new LocalStrategy(async (username, password, done) => {
     try {
@@ -67,54 +27,24 @@ export function setupAuth(app: Express) {
         return done(null, false);
       }
 
-      const userForSession = {
+      // Create user object without sensitive data
+      const userForToken = {
         id: user._id.toString(),
         email: user.email,
         username: user.email,
         credits: user.credits
       };
 
-      console.log('Authentication successful for user:', userForSession);
-      return done(null, userForSession);
+      console.log('Authentication successful for user:', userForToken);
+      return done(null, userForToken);
     } catch (err) {
       console.error('Authentication error:', err);
       return done(err);
     }
   }));
 
-  passport.serializeUser((user, done) => {
-    console.log('Serializing user:', user);
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: string, done) => {
-    try {
-      console.log('Deserializing user:', id);
-      const user = await User.findById(id);
-
-      if (!user) {
-        console.log('User not found during deserialization');
-        return done(null, false);
-      }
-
-      const userForSession = {
-        id: user._id.toString(),
-        email: user.email,
-        username: user.email,
-        credits: user.credits
-      };
-
-      console.log('User deserialized:', userForSession);
-      done(null, userForSession);
-    } catch (err) {
-      console.error('Deserialization error:', err);
-      done(err);
-    }
-  });
-
   app.post("/api/login", (req, res, next) => {
-    console.log('Login request received');
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", { session: false }, (err, user, info) => {
       if (err) {
         console.error('Login error:', err);
         return next(err);
@@ -125,42 +55,43 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      req.logIn(user, (err) => {
-        if (err) {
-          console.error('Login error:', err);
-          return next(err);
-        }
-        console.log('Login successful - Session:', req.session);
-        res.json(user);
-      });
+      // Generate JWT token
+      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+      console.log('Login successful - Token generated');
+
+      res.json({ token, user });
     })(req, res, next);
   });
 
   app.post("/api/logout", (req, res) => {
-    if (req.session) {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error('Session destruction error:', err);
-          return res.status(500).json({ message: "Logout failed" });
-        }
-        res.clearCookie('roomcraft.sid', { path: '/' });
-        res.json({ message: "Logged out successfully" });
-      });
-    } else {
-      res.json({ message: "Already logged out" });
-    }
+    res.json({ message: "Logged out successfully" });
   });
 
   app.get("/api/user", (req, res) => {
-    console.log('\n=== User Check ===');
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+      const user = jwt.verify(token, JWT_SECRET);
+      res.json(user);
+    } catch (err) {
+      console.error('Token verification failed:', err);
+      res.status(401).json({ message: "Invalid token" });
+    }
+  });
+
+  // Debug middleware remains (though session data will be empty)
+  app.use((req, res, next) => {
+    console.log('\n=== Request Debug ===');
+    console.log('Session ID:', req.sessionID);
     console.log('Session:', req.session);
     console.log('Is Authenticated:', req.isAuthenticated());
     console.log('User:', req.user);
-
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-
-    res.json(req.user);
+    next();
   });
 }

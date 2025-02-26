@@ -14,15 +14,22 @@ export async function apiRequest(
     "Content-Type": "application/json",
   };
 
+  // Add JWT token to headers if available
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(url, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
-    credentials: "include", // Important: ensures cookies are sent with requests
   });
 
   if (!response.ok) {
     if (response.status === 401) {
+      // Clear token on auth error
+      localStorage.removeItem('auth_token');
       const error = new Error("Authentication required");
       error.name = "AuthError";
       throw error;
@@ -36,15 +43,20 @@ export async function apiRequest(
 
 export function getQueryFn(options: GetQueryFnOptions = {}) {
   return async ({ queryKey }: { queryKey: QueryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include", // Important: ensures cookies are sent with requests
-      headers: {
-        "Content-Type": "application/json",
-      }
-    });
+    const token = localStorage.getItem('auth_token');
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(queryKey[0] as string, { headers });
 
     if (!res.ok) {
       if (res.status === 401) {
+        localStorage.removeItem('auth_token');
         if (options.on401 === "returnNull") {
           return null;
         }
@@ -61,7 +73,7 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn(),
-      staleTime: 0, // Don't cache authentication data
+      staleTime: 0,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       refetchOnMount: true,

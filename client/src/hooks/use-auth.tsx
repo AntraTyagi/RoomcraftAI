@@ -19,6 +19,7 @@ interface LoginData {
 }
 
 interface LoginResponse {
+  token: string;
   user: User;
 }
 
@@ -53,9 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/login", credentials);
       const data = await res.json();
-      return { user: data };
+      return data;
     },
     onSuccess: (data: LoginResponse) => {
+      localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
       toast({
         title: "Login successful",
@@ -74,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/logout");
+      localStorage.removeItem('auth_token');
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
@@ -95,9 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/register", { ...credentials, credits: 10 });
       const data = await res.json();
-      return { user: data };
+      return data;
     },
     onSuccess: (data: LoginResponse) => {
+      localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
       toast({
         title: "Registration successful",
