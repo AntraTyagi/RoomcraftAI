@@ -166,7 +166,7 @@ export function registerRoutes(app: Express): Server {
       console.log("Adding credits for user:", req.user.id);
       const user = await User.findByIdAndUpdate(
         req.user.id,
-        { $inc: { credits: 10 } }, // Changed to $inc to add 10 credits
+        { $inc: { credits: 10 } }, 
         { new: true }
       );
       if (!user) {
@@ -178,9 +178,9 @@ export function registerRoutes(app: Express): Server {
       // Create credit history entry
       await CreditHistory.create({
         userId: req.user.id,
-        operationType: 'admin',
+        operationType: 'generate', 
         description: 'Admin credit addition',
-        creditsUsed: -10 // Negative because we're adding credits
+        creditsUsed: -10 
       });
 
       res.json({ credits: user.credits });
