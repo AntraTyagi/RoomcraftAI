@@ -91,34 +91,26 @@ export default function VirtualStaging() {
       if (operation === "remove") {
         prompt = `Remove the furniture in the masked area completely. 
           Fill the space naturally with flooring, walls, or appropriate background elements that match the room's style.
-          Ensure seamless integration with the surrounding area.
-          Requirements:
-          - 8k resolution
-          - Professional interior photography quality
-          - Perfect lighting and shadows
-          - Ultra realistic materials
-          - Natural integration with surroundings`;
+          Ensure seamless integration with the surrounding area.`;
       } else if (operation === "replace" && furnitureType && furnitureStyle) {
         prompt = `Replace the masked area with a ${furnitureColor || ''} ${furnitureStyle} style ${furnitureType}. 
           The furniture style should be ${furnitureStyle} with high-end materials and craftsmanship.
-          Maintain the exact same position, scale, and perspective as the furniture in the original image.
-          Match the room's lighting conditions, shadows, and ambient light reflections.
-          Ensure photorealistic rendering with detailed materials and textures.
-          Requirements:
-          - 8k resolution
-          - Professional interior photography quality
-          - Perfect lighting and shadows
-          - Ultra realistic materials
-          - Natural integration with surroundings
-
-          The new furniture should seamlessly blend with the room's existing aesthetic and appear as if it was originally photographed in place.`;
+          Maintain the exact same position, scale, and perspective as the furniture in the original image.`;
       }
 
       setDebugImages(prev => ({ ...prev, prompt }));
 
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+
       const response = await fetch("/api/inpaint", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           image: uploadedImage.split(',')[1],
           mask: maskBase64,
