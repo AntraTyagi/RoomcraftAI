@@ -8,20 +8,21 @@ import Generate from "@/pages/generate";
 import AuthPage from "@/pages/auth-page";
 import VirtualStaging from "@/pages/virtual-staging";
 import Account from "@/pages/account";
-import VerifyEmail from "@/pages/verify-email"; // New import
+import VerifyEmail from "@/pages/verify-email";
 import Layout from "@/components/layout";
 import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "./lib/protected-route";
 
 function Router() {
   return (
     <Layout>
       <Switch>
         <Route path="/" component={Home} />
-        <Route path="/generate" component={Generate} />
-        <Route path="/virtual-staging" component={VirtualStaging} />
+        <ProtectedRoute path="/generate" component={Generate} />
+        <ProtectedRoute path="/virtual-staging" component={VirtualStaging} />
         <Route path="/auth" component={AuthPage} />
-        <Route path="/account" component={Account} />
-        <Route path="/verify-email" component={VerifyEmail} /> {/* New Route */}
+        <ProtectedRoute path="/account" component={Account} />
+        <Route path="/verify-email" component={VerifyEmail} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
