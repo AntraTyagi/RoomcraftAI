@@ -3,14 +3,18 @@ import crypto from 'crypto';
 
 console.log("Setting up email transporter with Gmail credentials");
 
-// Create transporter with simpler Gmail configuration
+// Create transporter with optimized Gmail configuration
 const transporter = nodemailer.createTransport({
   service: 'Gmail',
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD
   },
-  debug: true // Enable debug logs
+  pool: true, // Use pooled connections
+  maxConnections: 3,
+  rateDelta: 1000,
+  rateLimit: 3,
+  debug: true
 });
 
 export async function verifyEmailTransporter() {
@@ -49,7 +53,7 @@ export async function sendVerificationEmail(email: string, name: string, token: 
   const mailOptions = {
     from: `"RoomcraftAI" <${process.env.GMAIL_USER}>`,
     to: email,
-    subject: 'Verify your RoomcraftAI account',
+    subject: 'Please verify your RoomcraftAI account',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #333;">Welcome to RoomcraftAI!</h1>
@@ -71,7 +75,8 @@ export async function sendVerificationEmail(email: string, name: string, token: 
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="color: #999; font-size: 12px;">If you didn't create an account with RoomcraftAI, please ignore this email.</p>
       </div>
-    `
+    `,
+    priority: 'high'
   };
 
   try {

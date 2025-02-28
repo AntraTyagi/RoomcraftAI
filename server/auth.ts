@@ -29,13 +29,16 @@ export function setupAuth(app: Express) {
     }
   });
 
-  passport.use(new LocalStrategy(async (username, password, done) => {
+  passport.use(new LocalStrategy({
+    usernameField: 'email',
+    passwordField: 'password'
+  }, async (email, password, done) => {
     try {
-      console.log('Login attempt for:', username);
-      const user = await User.findOne({ email: username });
+      console.log('Login attempt for:', email);
+      const user = await User.findOne({ email });
 
       if (!user) {
-        console.log('User not found:', username);
+        console.log('User not found:', email);
         return done(null, false, { message: "Invalid credentials" });
       }
 
@@ -47,6 +50,7 @@ export function setupAuth(app: Express) {
       }
 
       if (!user.isEmailVerified) {
+        console.log('User not verified:', email);
         return done(null, false, { message: "Please verify your email before logging in" });
       }
 
@@ -105,7 +109,7 @@ export function setupAuth(app: Express) {
         username: email,
         verificationToken: token,
         verificationTokenExpires: expires,
-        isEmailVerified: false // Set to false initially
+        isEmailVerified: false 
       });
 
       console.log("Attempting to save new user");
@@ -154,10 +158,15 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Email verification endpoint
   app.get("/api/verify-email", async (req, res) => {
     try {
       const { token } = req.query;
       console.log("Email verification attempt with token:", token);
+
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: "Invalid verification token" });
+      }
 
       const user = await User.findOne({
         verificationToken: token,
@@ -171,13 +180,24 @@ export function setupAuth(app: Express) {
         });
       }
 
+      // Update user verification status
       user.isEmailVerified = true;
       user.verificationToken = undefined;
       user.verificationTokenExpires = undefined;
       await user.save();
+
       console.log("Email verified successfully for user:", user.email);
 
-      res.json({ message: "Email verified successfully. You can now log in." });
+      // Return success message and user data
+      const userResponse = {
+        message: "Email verified successfully. You can now log in.",
+        user: {
+          email: user.email,
+          name: user.name
+        }
+      };
+
+      res.json(userResponse);
     } catch (error) {
       console.error('Email verification error:', error);
       res.status(500).json({ message: "Email verification failed" });
