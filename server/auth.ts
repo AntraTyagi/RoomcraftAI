@@ -180,20 +180,22 @@ export function setupAuth(app: Express) {
         });
       }
 
-      // Update user verification status
+      // Update user verification status and add initial credits
       user.isEmailVerified = true;
       user.verificationToken = undefined;
       user.verificationTokenExpires = undefined;
+      user.credits = 10; // Allocate free credits upon verification
       await user.save();
 
       console.log("Email verified successfully for user:", user.email);
 
       // Return success message and user data
       const userResponse = {
-        message: "Email verified successfully. You can now log in.",
+        message: "Email verified successfully. Your account has been credited with 10 free credits. You can now log in.",
         user: {
           email: user.email,
-          name: user.name
+          name: user.name,
+          credits: user.credits
         }
       };
 

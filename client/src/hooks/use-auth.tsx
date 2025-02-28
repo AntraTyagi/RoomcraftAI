@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const firstName = data.user.name.split(' ')[0];
       toast({
         title: "Registration successful",
-        description: `Welcome, ${firstName}! You've received 10 free credits.`,
+        description: `Welcome, ${firstName}! Please verify your email to receive free credits.`,
       });
     },
     onError: (error: Error) => {
