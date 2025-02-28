@@ -10,10 +10,10 @@ import DesignGallery from "@/components/design-gallery";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { COLOR_THEMES } from "@/constants/color-themes";
-import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { COLOR_THEMES } from "@/constants/color-themes";
+import { Badge } from "@/components/ui/badge";
 
 export default function Generate() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export default function Generate() {
       }
 
       const res = await apiRequest("POST", "/api/generate", {
-        image: uploadedImage,
+        image: uploadedImage?.split(',')[1],
         style: selectedStyle,
         roomType: selectedRoom,
         colorTheme: selectedTheme,
@@ -54,7 +54,6 @@ export default function Generate() {
         description: error.message || "Failed to generate designs. Please try again.",
         variant: "destructive",
       });
-      // Refresh credits even on error to ensure accurate display
       refreshCredits();
     },
   });
@@ -130,7 +129,7 @@ export default function Generate() {
             <Card
               key={theme.name}
               className={cn(
-                "cursor-pointer p-4 transition-all hover:border-primary relative overflow-hidden",
+                "cursor-pointer p-4 transition-all hover:border-primary relative",
                 selectedTheme === theme.name && "ring-2 ring-primary"
               )}
               onClick={() => setSelectedTheme(theme.name)}
