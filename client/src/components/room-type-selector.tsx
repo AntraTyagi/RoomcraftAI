@@ -33,18 +33,25 @@ export default function RoomTypeSelector({ selected, onSelect }: RoomTypeSelecto
         <Card
           key={room.name}
           className={cn(
-            "cursor-pointer p-4 transition-all hover:border-primary",
+            "cursor-pointer p-4 transition-all hover:border-primary overflow-visible",
             selected === room.name && "ring-2 ring-primary"
           )}
           onClick={() => onSelect(room.name)}
         >
-          <h4 className="font-medium">{room.name}</h4>
-          <p className="text-sm text-muted-foreground">{room.description}</p>
-          {selected === room.name && (
-            <Badge className="absolute top-2 right-2" variant="secondary">
-              Selected
-            </Badge>
-          )}
+          <div className="relative w-full">
+            <div className="relative">
+              <h4 className="font-medium">{room.name}</h4>
+              <p className="text-sm text-muted-foreground">{room.description}</p>
+            </div>
+            {selected === room.name && (
+              <Badge 
+                className="absolute -top-2 -right-2 z-[1]"
+                variant="secondary"
+              >
+                Selected
+              </Badge>
+            )}
+          </div>
         </Card>
       ))}
     </div>
