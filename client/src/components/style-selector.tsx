@@ -42,23 +42,25 @@ export default function StyleSelector({ selected, onSelect }: StyleSelectorProps
           )}
           onClick={() => onSelect(style.name)}
         >
-          <img
-            src={style.image}
-            alt={style.name}
-            className="w-full h-32 object-cover"
-          />
+          <div className="relative">
+            <img
+              src={style.image}
+              alt={style.name}
+              className="w-full h-32 object-cover"
+            />
+            {selected === style.name && (
+              <Badge
+                className="absolute top-2 right-2 bg-primary/90 text-primary-foreground"
+                variant="secondary"
+              >
+                Selected
+              </Badge>
+            )}
+          </div>
           <div className="p-3">
             <h3 className="font-semibold">{style.name}</h3>
             <p className="text-sm text-muted-foreground">{style.description}</p>
           </div>
-          {selected === style.name && (
-            <Badge
-              className="absolute top-2 right-2"
-              variant="secondary"
-            >
-              Selected
-            </Badge>
-          )}
         </Card>
       ))}
     </div>
