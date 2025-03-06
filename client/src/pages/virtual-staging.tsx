@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -7,6 +7,7 @@ import FileUpload from "@/components/file-upload";
 import AreaSelector, { type Area } from "@/components/area-selector";
 import FurnitureOperation from "@/components/furniture-operation";
 import ComparisonSlider from "@/components/comparison-slider";
+import DebugPanel from "@/components/debug-panel";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -102,6 +103,8 @@ export default function VirtualStaging() {
   const [furnitureType, setFurnitureType] = useState<string | undefined>();
   const [furnitureStyle, setFurnitureStyle] = useState<string | undefined>();
   const [furnitureColor, setFurnitureColor] = useState<string | undefined>();
+  const [maskVisualization, setMaskVisualization] = useState<string | null>(null);
+  const [currentPrompt, setCurrentPrompt] = useState<string | null>(null);
   const { toast } = useToast();
   const { user, refreshCredits } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -115,68 +118,16 @@ export default function VirtualStaging() {
         throw new Error("Missing required data for staging");
       }
 
-      const canvas = document.createElement('canvas');
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = uploadedImage;
-      });
-
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error("Failed to get canvas context");
-
-      ctx.fillStyle = 'black';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const containerRect = containerRef.current?.getBoundingClientRect();
-      if (!containerRect || containerRect.width === 0) {
-        throw new Error("Invalid container dimensions");
-      }
-
-      ctx.fillStyle = 'white';
-      selectedAreas.forEach(area => {
-        const scaleX = img.width / containerRect.width;
-        const scaleY = img.height / containerRect.height;
-
-        const x = area.x * scaleX;
-        const y = area.y * scaleY;
-        const width = area.width * scaleX;
-        const height = area.height * scaleY;
-
-        ctx.fillRect(x, y, width, height);
-      });
-
-      const maskBase64 = canvas.toDataURL('image/png').split(',')[1];
-
-      let prompt = '';
-      if (operation === "remove") {
-        prompt = `Remove the furniture in the masked area completely. 
-          Fill the space naturally with flooring, walls, or appropriate background elements that match the room's style.
-          Ensure seamless integration with the surrounding area.`;
-      } else if (operation === "replace" && furnitureType && furnitureStyle) {
-        prompt = `Replace the masked area with a ${furnitureColor || ''} ${furnitureStyle} style ${furnitureType}. 
-          The furniture style should be ${furnitureStyle} with high-end materials and craftsmanship.
-          Maintain the exact same position, scale, and perspective as the furniture in the original image.`;
-      }
-
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
       const response = await fetch("/api/inpaint", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${localStorage.getItem('auth_token') || ''}`
         },
         body: JSON.stringify({
           image: uploadedImage.split(',')[1],
-          mask: maskBase64,
-          prompt,
+          mask: maskVisualization,
+          prompt: currentPrompt,
         }),
       });
 
@@ -211,6 +162,55 @@ export default function VirtualStaging() {
     setSelectedAreas([]);
     setStagedImage(null);
   };
+
+  const generateMaskVisualization = () => {
+    if (!containerRef.current || !selectedAreas.length) return null;
+
+    const canvas = document.createElement('canvas');
+    const containerRect = containerRef.current.getBoundingClientRect();
+    canvas.width = containerRect.width;
+    canvas.height = containerRect.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'white';
+    selectedAreas.forEach(area => {
+      ctx.fillRect(area.x, area.y, area.width, area.height);
+    });
+
+    return canvas.toDataURL('image/png');
+  };
+
+  const generatePrompt = () => {
+    if (!operation) return null;
+
+    if (operation === "remove") {
+      return `Remove the furniture in the masked area completely. 
+        Fill the space naturally with flooring, walls, or appropriate background elements that match the room's style.
+        Ensure seamless integration with the surrounding area.`;
+    } else if (operation === "replace" && furnitureType && furnitureStyle) {
+      return `Replace the masked area with a ${furnitureColor || ''} ${furnitureStyle} style ${furnitureType}. 
+        The furniture style should be ${furnitureStyle} with high-end materials and craftsmanship.
+        Maintain the exact same position, scale, and perspective as the furniture in the original image.`;
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    if (selectedAreas.length && operation) {
+      const maskImage = generateMaskVisualization();
+      setMaskVisualization(maskImage);
+      const prompt = generatePrompt();
+      setCurrentPrompt(prompt);
+    } else {
+      setMaskVisualization(null);
+      setCurrentPrompt(null);
+    }
+  }, [selectedAreas, operation, furnitureType, furnitureStyle, furnitureColor]);
+
 
   const handleGenerate = () => {
     if (!uploadedImage) {
@@ -293,6 +293,14 @@ export default function VirtualStaging() {
                 colorOptions={COLOR_OPTIONS}
               />
             </Card>
+          )}
+
+          {selectedAreas.length > 0 && operation && (
+            <DebugPanel
+              inputImage={uploadedImage}
+              maskImage={maskVisualization}
+              prompt={currentPrompt}
+            />
           )}
 
           <Button
