@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Download } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DebugPanelProps {
@@ -18,6 +18,18 @@ export default function DebugPanel({
   prompt
 }: DebugPanelProps) {
   const [isVisible, setIsVisible] = useState(false);
+
+  const handleDownloadMask = () => {
+    if (!maskImage) return;
+
+    // Create a temporary link element
+    const link = document.createElement('a');
+    link.href = maskImage;
+    link.download = 'mask.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (!inputImage && !maskImage && !visualizationImage && !prompt) {
     return null;
@@ -56,7 +68,18 @@ export default function DebugPanel({
             )}
             {maskImage && (
               <div>
-                <p className="text-sm font-medium mb-2">Mask</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium">Mask</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadMask}
+                    className="h-7 px-2"
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Download
+                  </Button>
+                </div>
                 <img
                   src={maskImage}
                   alt="Mask"
