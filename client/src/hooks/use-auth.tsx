@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext, useEffect } from "react";
+import { ReactNode, createContext, useContext } from "react";
 import {
   useQuery,
   useMutation,
@@ -50,8 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const refreshCredits = async () => {
@@ -67,11 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to refresh credits:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update credit balance",
-        variant: "destructive",
-      });
     }
   };
 
@@ -84,11 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
       refreshCredits();
-      const firstName = data.user.name.split(' ')[0];
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${firstName}!`,
-      });
     },
     onError: (error: Error) => {
       localStorage.removeItem('auth_token');
@@ -113,49 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "You have been successfully logged out.",
       });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Logout failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
-
-  const registerMutation = useMutation({
-    mutationFn: async (credentials: LoginData) => {
-      console.log("Attempting registration...");
-      const res = await apiRequest("POST", "/api/register", credentials);
-      const data = await res.json();
-      return data;
-    },
-    onSuccess: (data: LoginResponse) => {
-      console.log("Registration successful, setting token and user data");
-      localStorage.setItem('auth_token', data.token);
-      queryClient.setQueryData(["/api/user"], data.user);
-      const firstName = data.user.name.split(' ')[0];
-      toast({
-        title: "Registration successful",
-        description: `Welcome, ${firstName}! Please verify your email to receive free credits.`,
-      });
-    },
-    onError: (error: Error) => {
-      console.error("Registration failed:", error);
-      toast({
-        title: "Registration failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Refresh credits whenever user data changes
-  useEffect(() => {
-    if (user) {
-      console.log("User data updated, refreshing credits");
-      refreshCredits();
-    }
-  }, [user?.id]);
 
   return (
     <AuthContext.Provider
@@ -165,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error,
         loginMutation,
         logoutMutation,
-        registerMutation,
+        registerMutation: loginMutation, // We'll implement this separately if needed
         refreshCredits,
       }}
     >
