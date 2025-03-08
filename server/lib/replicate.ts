@@ -2,6 +2,16 @@ import fetch from "node-fetch";
 
 const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
+interface ReplicateResponse {
+  id: string;
+  status: string;
+  output?: string[];
+  error?: string;
+  urls: {
+    get: string;
+  };
+}
+
 export async function generateDesign(
   image: string,
   style: string,
@@ -27,6 +37,7 @@ export async function generateDesign(
       designPrompt += ` ${prompt}`;
     }
 
+    // Make initial request to start the prediction
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
@@ -50,10 +61,11 @@ export async function generateDesign(
     });
 
     if (!response.ok) {
-      throw new Error(`Replicate API error: ${response.status} ${await response.text()}`);
+      const errorText = await response.text();
+      throw new Error(`Replicate API error: ${response.status} ${errorText}`);
     }
 
-    const prediction = await response.json();
+    const prediction = await response.json() as ReplicateResponse;
 
     // Poll for results
     const getResult = async (url: string): Promise<string[]> => {
@@ -67,9 +79,12 @@ export async function generateDesign(
         throw new Error(`Failed to get prediction result: ${await result.text()}`);
       }
 
-      const data = await result.json();
+      const data = await result.json() as ReplicateResponse;
 
       if (data.status === "succeeded") {
+        if (!Array.isArray(data.output)) {
+          throw new Error("Invalid output format from Replicate API");
+        }
         return data.output;
       } else if (data.status === "failed") {
         throw new Error(data.error || "Generation failed");

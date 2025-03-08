@@ -51,7 +51,8 @@ export default function Generate() {
         throw new Error(errorText);
       }
 
-      return await response.json();
+      const data = await response.json();
+      return data;
     },
     onSuccess: (data) => {
       setGeneratedDesigns(data.designs);
