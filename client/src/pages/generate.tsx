@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import FileUpload from "@/components/file-upload";
 import StyleSelector from "@/components/style-selector";
 import RoomTypeSelector from "@/components/room-type-selector";
+import RoomPreferences from "@/components/room-preferences";
 import DesignGallery from "@/components/design-gallery";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
@@ -27,53 +28,32 @@ export default function Generate() {
         throw new Error("Please login to generate designs");
       }
 
-      if (!uploadedImage) {
-        throw new Error("Please upload an image first");
+      if (!uploadedImage || !selectedStyle || !selectedRoom || !selectedTheme) {
+        throw new Error("Please fill in all required fields");
       }
 
-      if (!selectedStyle) {
-        throw new Error("Please select a style");
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({
+          image: uploadedImage.split(',')[1],
+          style: selectedStyle,
+          roomType: selectedRoom,
+          colorTheme: selectedTheme,
+          prompt: prompt || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText);
       }
 
-      if (!selectedRoom) {
-        throw new Error("Please select a room type");
-      }
-
-      if (!selectedTheme) {
-        throw new Error("Please select a color theme");
-      }
-
-      try {
-        const response = await fetch("/api/generate", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem('auth_token')}`
-          },
-          body: JSON.stringify({
-            image: uploadedImage.split(',')[1],
-            style: selectedStyle,
-            roomType: selectedRoom,
-            colorTheme: selectedTheme,
-            prompt: prompt || undefined
-          })
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || "Failed to generate designs");
-        }
-
-        const data = await response.json();
-        if (!data.designs || !Array.isArray(data.designs)) {
-          throw new Error("Invalid response format from server");
-        }
-
-        return data;
-      } catch (error) {
-        console.error("Generation error:", error);
-        throw error;
-      }
+      const data = await response.json();
+      return data;
     },
     onSuccess: (data) => {
       setGeneratedDesigns(data.designs);
@@ -84,7 +64,6 @@ export default function Generate() {
       });
     },
     onError: (error: Error) => {
-      console.error("Generation error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to generate designs. Please try again.",
@@ -94,30 +73,28 @@ export default function Generate() {
     },
   });
 
-  const handleGenerate = () => {
-    generateMutation.mutate();
-  };
-
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Generate Design Concepts</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">1. Upload Your Room</h2>
+          <h2 className="text-xl font-semibold mb-4">1. Upload Room Photo</h2>
           <FileUpload onUpload={setUploadedImage} />
         </Card>
 
         <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">2. Room Type</h2>
-          <RoomTypeSelector
-            selected={selectedRoom}
-            onSelect={setSelectedRoom}
+          <h2 className="text-xl font-semibold mb-4">2. Room Type & Theme</h2>
+          <RoomPreferences
+            selectedRoom={selectedRoom}
+            selectedTheme={selectedTheme}
+            onRoomSelect={setSelectedRoom}
+            onThemeSelect={setSelectedTheme}
           />
         </Card>
       </div>
 
-      <Card className="p-6 mb-8">
+      <Card className="p-6 my-8">
         <h2 className="text-xl font-semibold mb-4">3. Choose Style</h2>
         <StyleSelector onSelect={setSelectedStyle} selected={selectedStyle} />
       </Card>
@@ -131,7 +108,7 @@ export default function Generate() {
           className="mb-4"
         />
         <Button
-          onClick={handleGenerate}
+          onClick={() => generateMutation.mutate()}
           disabled={generateMutation.isPending}
           className="w-full"
         >

@@ -2,59 +2,6 @@ import fetch from "node-fetch";
 
 const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
-interface ReplicateResponse {
-  id: string;
-  status: string;
-  output?: string | string[];
-  error?: string;
-  urls: {
-    get: string;
-  };
-}
-
-async function makeReplicateRequest(endpoint: string, body: any) {
-  const token = process.env.REPLICATE_API_KEY;
-  if (!token) {
-    throw new Error("Replicate API key is missing");
-  }
-
-  const response = await fetch(`${REPLICATE_API_URL}${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Token ${token}`
-    },
-    body: JSON.stringify(body)
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Replicate API error: ${response.status} ${errorText}`);
-  }
-
-  return response.json();
-}
-
-async function pollPrediction(url: string) {
-  const token = process.env.REPLICATE_API_KEY;
-  if (!token) {
-    throw new Error("Replicate API key is missing");
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      "Authorization": `Token ${token}`
-    }
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get prediction result: ${errorText}`);
-  }
-
-  return response.json();
-}
-
 export async function generateDesign(
   image: string,
   style: string,
@@ -76,24 +23,49 @@ export async function generateDesign(
       designPrompt += ` ${prompt}`;
     }
 
-    const prediction = await makeReplicateRequest("/predictions", {
-      version: "c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316",
-      input: {
-        prompt: designPrompt,
-        negative_prompt: "blurry, low quality, distorted, unrealistic",
-        image: imageUrl,
-        num_outputs: 2,
-        guidance_scale: 7.5,
-        num_inference_steps: 50,
-        scheduler: "K_EULER_ANCESTRAL",
-        width: 1024,
-        height: 1024,
-      }
+    const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Token ${process.env.REPLICATE_API_KEY}`
+      },
+      body: JSON.stringify({
+        version: "c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316",
+        input: {
+          prompt: designPrompt,
+          negative_prompt: "blurry, low quality, distorted, unrealistic",
+          image: imageUrl,
+          num_outputs: 2,
+          guidance_scale: 7.5,
+          num_inference_steps: 50,
+          scheduler: "K_EULER_ANCESTRAL",
+          width: 1024,
+          height: 1024,
+        }
+      })
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Replicate API error: ${response.status} ${errorText}`);
+    }
+
+    const prediction = await response.json();
 
     // Poll for results
     const getResult = async (url: string): Promise<string[]> => {
-      const data = await pollPrediction(url);
+      const result = await fetch(url, {
+        headers: {
+          "Authorization": `Token ${process.env.REPLICATE_API_KEY}`
+        }
+      });
+
+      if (!result.ok) {
+        const errorText = await result.text();
+        throw new Error(`Failed to get prediction result: ${errorText}`);
+      }
+
+      const data = await result.json();
 
       if (data.status === "succeeded") {
         if (!Array.isArray(data.output)) {
