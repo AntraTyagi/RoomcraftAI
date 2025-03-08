@@ -2,88 +2,35 @@ import fetch from "node-fetch";
 
 const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
-// Get token with validation
-function getValidatedToken(): string {
-  const token = process.env.REPLICATE_API_KEY;
-  if (!token) {
-    throw new Error("Replicate API key is missing");
-  }
-
-  // Remove any whitespace and validate format
-  const cleanToken = token.trim();
-  if (!cleanToken.match(/^r8_[a-zA-Z0-9]{32,}$/)) {
-    throw new Error("Invalid Replicate API key format");
-  }
-
-  return cleanToken;
-}
-
-async function makeReplicateRequest(endpoint: string, body: any) {
-  const token = getValidatedToken();
-
-  console.log(`Making request to ${endpoint}`);
-  console.log("Request body:", {
-    ...body,
-    input: {
-      ...body.input,
-      image: body.input.image ? '[IMAGE DATA]' : undefined,
-      mask: body.input.mask ? '[MASK DATA]' : undefined
-    }
-  });
-
-  const response = await fetch(`${REPLICATE_API_URL}${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Token ${token}`
-    },
-    body: JSON.stringify(body)
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Replicate API error (${response.status}):`, errorText);
-    throw new Error(`Replicate API error: ${response.status} ${errorText}`);
-  }
-
-  return response.json();
-}
-
-async function pollPrediction(url: string) {
-  const token = getValidatedToken();
-
-  const response = await fetch(url, {
-    headers: {
-      "Authorization": `Token ${token}`
-    }
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Prediction polling error:", errorText);
-    throw new Error(`Failed to get prediction result: ${errorText}`);
-  }
-
-  return response.json();
-}
-
 export async function inpaintFurniture(
   image: string,
   mask: string,
   prompt: string
 ): Promise<string> {
+  const token = process.env.REPLICATE_API_KEY?.trim();
+  if (!token) {
+    throw new Error("Replicate API key is missing");
+  }
+
   try {
+    console.log("Starting inpainting with:", {
+      promptLength: prompt.length,
+      maskLength: mask.length,
+      imageLength: image.length
+    });
+
     // Convert inputs to data URLs if they aren't already
     const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
     const maskUrl = mask.startsWith('data:') ? mask : `data:image/png;base64,${mask}`;
 
-    console.log("Starting inpainting with:", {
-      promptLength: prompt.length,
+    // Log the first 100 characters of each base64 string for debugging
+    console.log("Input data preview:", {
+      imagePreview: imageUrl.substring(0, 100) + "...",
       maskPreview: maskUrl.substring(0, 100) + "...",
-      imagePreview: imageUrl.substring(0, 100) + "..."
+      promptPreview: prompt.substring(0, 100) + "..."
     });
 
-    const prediction = await makeReplicateRequest("/predictions", {
+    const requestBody = {
       version: "95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3",
       input: {
         image: imageUrl,
@@ -95,24 +42,70 @@ export async function inpaintFurniture(
         num_outputs: 1,
         guidance_scale: 7.5,
         num_inference_steps: 25
-      }
+      },
+    };
+
+    console.log("Sending request to Replicate API with config:", {
+      modelVersion: requestBody.version,
+      prompt: requestBody.input.prompt,
+      scheduler: requestBody.input.scheduler,
+      steps: requestBody.input.num_inference_steps,
+      imageType: typeof imageUrl,
+      maskType: typeof maskUrl
     });
 
-    console.log("Inpainting prediction created:", prediction.id);
+    const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Replicate API error response:", errorText);
+      throw new Error(`Failed to start inpainting: ${errorText}`);
+    }
+
+    const prediction = await response.json();
+    console.log("Inpainting started with prediction ID:", prediction.id);
 
     // Poll for results
     const getResult = async (url: string): Promise<string> => {
-      const data = await pollPrediction(url);
-      console.log("Prediction status:", data.status);
+      console.log("Polling for results at:", url);
+
+      const result = await fetch(url, {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      });
+
+      if (!result.ok) {
+        const error = await result.text();
+        console.error("Prediction status error:", error);
+        throw new Error(`Failed to get prediction result: ${error}`);
+      }
+
+      const data = await result.json();
+      console.log("Inpainting status:", data.status, "Response data:", {
+        status: data.status,
+        outputUrl: data.output?.[0] ? data.output[0].substring(0, 100) + "..." : null,
+        error: data.error,
+        logs: data.logs
+      });
 
       if (data.status === "succeeded") {
+        console.log("Inpainting completed successfully");
         if (!data.output || !data.output[0]) {
           throw new Error("No output image received from the model");
         }
         const outputUrl = data.output[0];
-        console.log("Generated image URL:", outputUrl.substring(0, 100) + "...");
+        console.log("Generated image URL preview:", outputUrl.substring(0, 100) + "...");
         return outputUrl;
       } else if (data.status === "failed") {
+        console.error("Inpainting failed:", data.error);
         throw new Error(data.error || "Inpainting failed");
       }
 

@@ -2,16 +2,6 @@ import fetch from "node-fetch";
 
 const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
-interface ReplicateResponse {
-  id: string;
-  status: string;
-  output?: string[];
-  error?: string;
-  urls: {
-    get: string;
-  };
-}
-
 export async function generateDesign(
   image: string,
   style: string,
@@ -19,54 +9,34 @@ export async function generateDesign(
   colorTheme?: string,
   prompt?: string
 ): Promise<string[]> {
-  console.log("=== Starting generateDesign ===");
-  const token = process.env.REPLICATE_API_KEY;
-
-  console.log("API Key check:", {
-    exists: Boolean(token),
-    length: token?.length,
-    preview: token ? `${token.substring(0, 4)}...${token.substring(token.length - 4)}` : 'missing'
-  });
-
-  if (!token) {
-    console.error("Replicate API key is missing");
+  if (!process.env.REPLICATE_API_KEY) {
     throw new Error("Replicate API key is missing");
   }
 
   try {
-    // Convert base64 to data URL if needed
+    // Convert base64 to a temporary URL using data URI
     const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
-    console.log("Image URL format:", {
-      isDataUrl: image.startsWith('data:'),
-      length: imageUrl.length,
-      preview: imageUrl.substring(0, 50) + '...'
-    });
 
-    // Construct the prompt
+    // Construct a detailed prompt incorporating all preferences
     let designPrompt = `Transform this ${roomType?.toLowerCase() || 'room'} into a ${style.toLowerCase()} style interior design.`;
+
     if (colorTheme) {
       designPrompt += ` Use a ${colorTheme.toLowerCase()} color palette.`;
     }
+
     designPrompt += ` Maintain room layout and structure, but update decor, furniture, and color scheme.`;
+
     if (prompt) {
-      designPrompt += ` ${prompt}`;
+      designPrompt += ` Additional requirements: ${prompt}`;
     }
 
-    console.log("Request configuration:", {
-      endpoint: `${REPLICATE_API_URL}/predictions`,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Token [HIDDEN]"
-      },
-      prompt: designPrompt
-    });
+    console.log('Sending request to Replicate with prompt:', designPrompt);
 
-    // Make initial request to start the prediction
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Token ${token}`
+        Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
       },
       body: JSON.stringify({
         version: "c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316",
@@ -79,70 +49,39 @@ export async function generateDesign(
           num_inference_steps: 50,
           scheduler: "K_EULER_ANCESTRAL",
           width: 1024,
-          height: 1024
-        }
-      })
-    });
-
-    console.log("Initial API Response:", {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
+          height: 1024,
+        },
+      }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("API Error Response:", {
-        status: response.status,
-        errorText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
+      console.error("Replicate API error:", errorText);
       throw new Error(`Replicate API error: ${response.status} ${errorText}`);
     }
 
-    const prediction = await response.json() as ReplicateResponse;
-    console.log("Prediction created:", {
-      id: prediction.id,
-      status: prediction.status,
-      pollingUrl: prediction.urls.get
-    });
+    const prediction = await response.json();
+    console.log("Prediction created:", prediction.id);
 
     // Poll for results
     const getResult = async (url: string): Promise<string[]> => {
-      console.log("Polling prediction:", { url });
-
       const result = await fetch(url, {
         headers: {
-          "Authorization": `Token ${token}`
-        }
-      });
-
-      console.log("Poll response:", {
-        status: result.status,
-        statusText: result.statusText,
-        headers: Object.fromEntries(result.headers.entries())
+          Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+        },
       });
 
       if (!result.ok) {
         const errorText = await result.text();
-        console.error("Poll error:", {
-          status: result.status,
-          errorText
-        });
-        throw new Error(`Failed to get prediction result: ${errorText}`);
+        console.error("Prediction status error:", errorText);
+        throw new Error("Failed to get prediction result");
       }
 
-      const data = await result.json() as ReplicateResponse;
-      console.log("Poll result:", {
-        status: data.status,
-        hasOutput: Boolean(data.output),
-        outputLength: data.output?.length,
-        error: data.error
-      });
+      const data = await result.json();
+      console.log("Prediction status:", data.status, "Output:", data.output);
 
       if (data.status === "succeeded") {
-        if (!Array.isArray(data.output)) {
-          console.error("Invalid output format:", data.output);
+        if (!Array.isArray(data.output) || data.output.length === 0) {
           throw new Error("Invalid output format from Replicate API");
         }
         return data.output;
@@ -155,7 +94,9 @@ export async function generateDesign(
       return getResult(url);
     };
 
-    return getResult(prediction.urls.get);
+    const results = await getResult(prediction.urls.get);
+    console.log("Generated images:", results);
+    return results;
   } catch (error) {
     console.error("Generate design error:", error);
     throw error;

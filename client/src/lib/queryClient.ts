@@ -14,29 +14,22 @@ export async function apiRequest(
     "Content-Type": "application/json",
   };
 
-  // Get token from localStorage
+  // Add JWT token to headers if available
   const token = localStorage.getItem('auth_token');
-  if (!token) {
-    console.warn("No auth token found in localStorage");
-  } else {
-    console.log("Found auth token:", token.substring(0, 10) + "...");
+  if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  console.log(`Making ${method} request to ${url}`);
   const response = await fetch(url, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
-    credentials: 'include', // Important: Include cookies for session persistence
   });
 
   if (!response.ok) {
     if (response.status === 401) {
-      // Clear token and user data on auth error
-      console.error("Authentication error, clearing token");
+      // Clear token on auth error
       localStorage.removeItem('auth_token');
-      queryClient.setQueryData(["/api/user"], null);
       const error = new Error("Authentication required");
       error.name = "AuthError";
       throw error;
@@ -50,55 +43,37 @@ export async function apiRequest(
 
 export function getQueryFn(options: GetQueryFnOptions = {}) {
   return async ({ queryKey }: { queryKey: QueryKey }) => {
-    try {
-      console.log(`Making query request to ${queryKey[0]}`);
-      const token = localStorage.getItem('auth_token');
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
+    const token = localStorage.getItem('auth_token');
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const res = await fetch(queryKey[0] as string, { 
-        headers,
-        credentials: 'include' // Important: Include cookies for session persistence
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          console.error("Authentication error in query");
-          localStorage.removeItem('auth_token');
-          queryClient.setQueryData(["/api/user"], null);
-          if (options.on401 === "returnNull") {
-            return null;
-          }
-          throw new Error("Authentication required");
-        }
-        const errorText = await res.text();
-        throw new Error(errorText);
-      }
-
-      const data = await res.json();
-      console.log(`Query response from ${queryKey[0]}:`, { 
-        success: true, 
-        hasData: Boolean(data) 
-      });
-      return data;
-    } catch (error) {
-      console.error("Query error:", error);
-      throw error;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
+
+    const res = await fetch(queryKey[0] as string, { headers });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        localStorage.removeItem('auth_token');
+        if (options.on401 === "returnNull") {
+          return null;
+        }
+        throw new Error("Authentication required");
+      }
+      throw new Error(await res.text());
+    }
+
+    return res.json();
   };
 }
 
-// Configure the QueryClient with proper defaults
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn(),
-      staleTime: 0, // Consider all data stale immediately
+      staleTime: 0,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       refetchOnMount: true,

@@ -1,46 +1,47 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import session from 'express-session';
-import MongoStore from 'connect-mongo';
-import passport from 'passport';
-import { connectDB } from "./lib/mongodb";
 
 const app = express();
 
-// Body parser middleware
+// 1. Body parser middleware must come first
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Set trust proxy for secure cookies in Replit environment
-app.set('trust proxy', 1);
+// 2. Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-// Connect to MongoDB
-connectDB();
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
 
-// Session middleware
-app.use(session({
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft'
-  }),
-  secret: process.env.REPL_ID || 'roomcraft-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false,
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000
-  }
-}));
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+      log(logLine);
+    }
+  });
 
-// Initialize passport
-app.use(passport.initialize());
-app.use(passport.session());
+  next();
+});
 
 (async () => {
+  // 3. Register routes which will set up auth middleware
   const server = registerRoutes(app);
 
-  // Error handling middleware
+  // 4. Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error("Error:", err);
     const status = err.status || err.statusCode || 500;
@@ -48,7 +49,7 @@ app.use(passport.session());
     res.status(status).json({ message });
   });
 
-  // Setup Vite or static serving
+  // 5. Setup Vite or static serving
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
