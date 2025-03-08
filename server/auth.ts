@@ -7,13 +7,14 @@ import { User } from "./models/User";
 const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
 export function setupAuth(app: Express) {
-  // Serialize user ID for the session
+  // Serialize just the user ID
   passport.serializeUser((user: any, done) => {
-    console.log('Serializing user:', user._id);
-    done(null, user._id);
+    const userId = user._id.toString();
+    console.log('Serializing user:', userId);
+    done(null, userId);
   });
 
-  // Deserialize user from the session ID
+  // Find user by ID when deserializing
   passport.deserializeUser(async (id: string, done) => {
     try {
       console.log('Deserializing user:', id);
@@ -22,7 +23,7 @@ export function setupAuth(app: Express) {
         console.log('User not found during deserialization');
         return done(null, false);
       }
-      console.log('User found:', user.email);
+      console.log('Found user:', user.email);
       done(null, user);
     } catch (err) {
       console.error('Deserialization error:', err);
@@ -79,7 +80,6 @@ export function setupAuth(app: Express) {
           return next(err);
         }
 
-        // Generate JWT token
         const token = jwt.sign({
           id: user._id,
           email: user.email
@@ -87,7 +87,6 @@ export function setupAuth(app: Express) {
 
         console.log('Login successful - Token and session created for:', user.email);
 
-        // Set auth token cookie
         res.cookie('auth_token', token, {
           httpOnly: true,
           secure: false,

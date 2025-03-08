@@ -18,7 +18,7 @@ app.set('trust proxy', 1);
 // Connect to MongoDB first
 connectDB();
 
-// Setup session middleware before passport
+// Setup session middleware
 const sessionMiddleware = session({
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
@@ -32,9 +32,7 @@ const sessionMiddleware = session({
   cookie: {
     secure: false,
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000,
-    path: '/',
-    sameSite: 'lax'
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
   },
   name: 'roomcraft.sid'
 });
