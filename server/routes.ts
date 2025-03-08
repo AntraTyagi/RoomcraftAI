@@ -37,7 +37,6 @@ export function registerRoutes(app: Express): Server {
   // Helper function to handle credit deduction
   const deductUserCredits = async (userId: string, operationType: 'generate' | 'inpaint' | 'unstage') => {
     try {
-      // Check user credits first
       console.log(`Checking credits for user ${userId}`);
       const user = await User.findById(userId);
       if (!user) {
@@ -49,8 +48,6 @@ export function registerRoutes(app: Express): Server {
         throw new Error("Insufficient credits");
       }
 
-      // Record credit usage
-      console.log(`Creating credit history record for ${operationType}`);
       const creditHistory = await CreditHistory.create({
         userId,
         operationType,
@@ -59,8 +56,6 @@ export function registerRoutes(app: Express): Server {
       });
       console.log(`Credit history created: ${creditHistory._id}`);
 
-      // Update user credits atomically
-      console.log(`Updating user credits from ${user.credits} to ${user.credits - 1}`);
       const updatedUser = await User.findByIdAndUpdate(
         userId,
         { $inc: { credits: -1 } },
@@ -135,7 +130,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Modified generate endpoint to use the unstaging result
+  // Modified generate endpoint to use direct image input
   app.post("/api/generate", authMiddleware, async (req: any, res) => {
     try {
       console.log("Generate request received from user:", req.user.id);
@@ -147,18 +142,9 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // First, call the unstaging endpoint to get an empty room
-      const unstageResponse = await axios.post(
-        `${req.protocol}://${req.get('host')}/api/unstage`,
-        { image },
-        { headers: { Authorization: req.headers.authorization } }
-      );
-
-      const emptyRoomUrl = unstageResponse.data.emptyRoomUrl;
-
-      // Generate designs using the empty room
+      // Generate designs using the provided image
       console.log("Generating designs with params:", { style, roomType, colorTheme });
-      const designs = await generateDesign(emptyRoomUrl, style, roomType, colorTheme, prompt);
+      const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
 
       if (!designs || !designs.length) {
         throw new Error("No designs were generated");

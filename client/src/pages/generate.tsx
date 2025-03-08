@@ -35,36 +35,42 @@ export default function Generate() {
         throw new Error("Please upload an image first");
       }
 
+      if (!selectedStyle) {
+        throw new Error("Please select a style");
+      }
+
+      if (!selectedRoom) {
+        throw new Error("Please select a room type");
+      }
+
+      if (!selectedTheme) {
+        throw new Error("Please select a color theme");
+      }
+
       const imageBase64 = uploadedImage.split(',')[1];
 
       try {
-        // Step 1: Call the unstaging endpoint
-        const unstageRes = await apiRequest("POST", "/api/unstage", {
-          image: imageBase64
-        });
-
-        if (!unstageRes.ok) {
-          const errorText = await unstageRes.text();
-          throw new Error(errorText || "Failed to remove furniture");
-        }
-
-        const { emptyRoomUrl } = await unstageRes.json();
-
-        // Step 2: Call the generate endpoint with the empty room URL
-        const generateRes = await apiRequest("POST", "/api/generate", {
-          image: emptyRoomUrl,
+        // Generate designs using the provided image
+        console.log("Generating designs with params:", { selectedStyle, selectedRoom, selectedTheme });
+        const res = await apiRequest("POST", "/api/generate", {
+          image: imageBase64,
           style: selectedStyle,
           roomType: selectedRoom,
           colorTheme: selectedTheme,
-          prompt,
+          prompt: prompt || undefined,
         });
 
-        if (!generateRes.ok) {
-          const errorText = await generateRes.text();
+        if (!res.ok) {
+          const errorText = await res.text();
           throw new Error(errorText || "Failed to generate designs");
         }
 
-        return generateRes.json();
+        const data = await res.json();
+        if (!data.designs || !Array.isArray(data.designs)) {
+          throw new Error("Invalid response format from server");
+        }
+
+        return data;
       } catch (error) {
         console.error("Generation error:", error);
         throw error;
@@ -90,42 +96,6 @@ export default function Generate() {
   });
 
   const handleGenerate = () => {
-    if (!uploadedImage) {
-      toast({
-        title: "Error",
-        description: "Please upload an image first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!selectedStyle) {
-      toast({
-        title: "Error",
-        description: "Please select a style",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!selectedRoom) {
-      toast({
-        title: "Error",
-        description: "Please select a room type",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!selectedTheme) {
-      toast({
-        title: "Error",
-        description: "Please select a color theme",
-        variant: "destructive",
-      });
-      return;
-    }
-
     generateMutation.mutate();
   };
 
