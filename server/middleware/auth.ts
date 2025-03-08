@@ -15,6 +15,12 @@ declare global {
 }
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  // First check if user is authenticated via session
+  if (req.isAuthenticated()) {
+    return next();
+  }
+
+  // If not authenticated via session, check JWT
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
