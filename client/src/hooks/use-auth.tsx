@@ -5,7 +5,7 @@ import {
   UseMutationResult,
   useQueryClient,
 } from "@tanstack/react-query";
-import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
+import { getQueryFn, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -42,11 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Check for existing token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    console.log("Initial auth check:", { hasToken: Boolean(token) });
+  }, []);
+
   const {
     data: user,
     error,
     isLoading,
-  } = useQuery<User>({
+  } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
@@ -82,11 +88,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
+      console.log("Attempting login...");
       const res = await apiRequest("POST", "/api/login", credentials);
       const data = await res.json();
       return data;
     },
     onSuccess: (data: LoginResponse) => {
+      console.log("Login successful, setting token and user data");
       localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
       refreshCredits();
@@ -97,6 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      console.error("Login failed:", error);
+      localStorage.removeItem('auth_token');
       toast({
         title: "Login failed",
         description: error.message,
@@ -107,10 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      console.log("Logging out...");
       await apiRequest("POST", "/api/logout");
       localStorage.removeItem('auth_token');
     },
     onSuccess: () => {
+      console.log("Logout successful, clearing user data");
       queryClient.setQueryData(["/api/user"], null);
       toast({
         title: "Logged out",
@@ -118,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      console.error("Logout failed:", error);
       toast({
         title: "Logout failed",
         description: error.message,
@@ -128,11 +141,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
+      console.log("Attempting registration...");
       const res = await apiRequest("POST", "/api/register", credentials);
       const data = await res.json();
       return data;
     },
     onSuccess: (data: LoginResponse) => {
+      console.log("Registration successful, setting token and user data");
       localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
       const firstName = data.user.name.split(' ')[0];
@@ -142,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      console.error("Registration failed:", error);
       toast({
         title: "Registration failed",
         description: error.message,
@@ -152,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (user) {
+      console.log("User data updated, refreshing credits");
       refreshCredits();
     }
   }, [user?.id]);

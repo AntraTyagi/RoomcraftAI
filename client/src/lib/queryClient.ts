@@ -16,7 +16,10 @@ export async function apiRequest(
 
   // Add JWT token to headers if available
   const token = localStorage.getItem('auth_token');
-  if (token) {
+  if (!token) {
+    console.warn("No auth token found in localStorage");
+  } else {
+    console.log("Found auth token:", token.substring(0, 10) + "...");
     headers['Authorization'] = `Bearer ${token}`;
   }
 
@@ -24,11 +27,13 @@ export async function apiRequest(
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
+    credentials: 'include' // Include cookies for session persistence
   });
 
   if (!response.ok) {
     if (response.status === 401) {
       // Clear token on auth error
+      console.error("Authentication error, clearing token");
       localStorage.removeItem('auth_token');
       const error = new Error("Authentication required");
       error.name = "AuthError";
@@ -52,7 +57,10 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch(queryKey[0] as string, { headers });
+    const res = await fetch(queryKey[0] as string, { 
+      headers,
+      credentials: 'include' // Include cookies for session persistence
+    });
 
     if (!res.ok) {
       if (res.status === 401) {
