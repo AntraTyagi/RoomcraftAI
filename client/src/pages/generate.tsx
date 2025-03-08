@@ -32,12 +32,17 @@ export default function Generate() {
       }
 
       const res = await apiRequest("POST", "/api/generate", {
-        image: uploadedImage?.split(',')[1],
+        image: uploadedImage,
         style: selectedStyle,
         roomType: selectedRoom,
         colorTheme: selectedTheme,
         prompt,
       });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
       return res.json();
     },
     onSuccess: (data) => {
