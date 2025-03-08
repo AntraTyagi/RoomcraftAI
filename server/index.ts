@@ -1,12 +1,39 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import session from 'express-session';
+import MemoryStore from 'memorystore';
 
 const app = express();
 
 // 1. Body parser middleware must come first
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Set trust proxy for secure cookies in Replit environment
+app.set('trust proxy', 1);
+
+// Setup session store
+const MemoryStoreSession = MemoryStore(session);
+const sessionStore = new MemoryStoreSession({
+  checkPeriod: 86400000 // prune expired entries every 24h
+});
+
+// Setup session middleware before any routes
+app.use(session({
+  store: sessionStore,
+  secret: process.env.REPL_ID || 'roomcraft-secret',
+  resave: true,
+  saveUninitialized: true,
+  cookie: {
+    secure: false,
+    httpOnly: true,
+    maxAge: 86400000,
+    path: '/',
+    sameSite: 'lax'
+  },
+  name: 'roomcraft.sid'
+}));
 
 // 2. Request logging middleware
 app.use((req, res, next) => {

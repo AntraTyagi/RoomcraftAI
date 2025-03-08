@@ -2,35 +2,11 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import jwt from 'jsonwebtoken';
-import session from 'express-session';
-import MemoryStore from 'memorystore';
 import { User } from "./models/User";
 
 const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
 export function setupAuth(app: Express) {
-  // Setup MemoryStore for Replit environment
-  const MemoryStoreSession = MemoryStore(session);
-  const sessionStore = new MemoryStoreSession({
-    checkPeriod: 86400000 // prune expired entries every 24h
-  });
-
-  // Setup session middleware
-  app.use(session({
-    store: sessionStore,
-    secret: JWT_SECRET,
-    resave: true, // Changed to true to ensure session persistence
-    saveUninitialized: true, // Changed to true to ensure new sessions are saved
-    cookie: {
-      secure: false, // Must be false for Replit
-      httpOnly: true,
-      maxAge: 86400000, // 24 hours
-      path: '/',
-      sameSite: 'lax'
-    },
-    name: 'roomcraft.sid' // Custom session name
-  }));
-
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -55,7 +31,7 @@ export function setupAuth(app: Express) {
       console.log('Deserializing user:', id);
       const user = await User.findById(id);
       if (!user) {
-        console.log('User not found during deserialization');
+        console.log('User not found when fetching credits');
         return done(null, false);
       }
       done(null, user);
@@ -114,7 +90,6 @@ export function setupAuth(app: Express) {
           return next(err);
         }
 
-        // Generate token
         const token = jwt.sign({
           id: user._id,
           email: user.email
@@ -122,10 +97,9 @@ export function setupAuth(app: Express) {
 
         console.log('Login successful - Token and session created for:', user.email);
 
-        // Set both session cookie and JWT token cookie
         res.cookie('auth_token', token, {
           httpOnly: true,
-          secure: false, // Must be false for Replit
+          secure: false,
           maxAge: 86400000,
           path: '/',
           sameSite: 'lax'
