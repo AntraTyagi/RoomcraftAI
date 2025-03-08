@@ -2,8 +2,9 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import session from 'express-session';
-import MemoryStore from 'memorystore';
+import MongoStore from 'connect-mongo';
 import passport from 'passport';
+import { connectDB } from "./lib/mongodb";
 
 const app = express();
 
@@ -14,22 +15,24 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Set trust proxy for secure cookies in Replit environment
 app.set('trust proxy', 1);
 
-// Setup session store
-const MemoryStoreSession = MemoryStore(session);
-const sessionStore = new MemoryStoreSession({
-  checkPeriod: 86400000 // prune expired entries every 24h
-});
+// Connect to MongoDB first
+connectDB();
 
 // Setup session middleware before passport
 const sessionMiddleware = session({
-  store: sessionStore,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
+    collectionName: 'sessions',
+    ttl: 24 * 60 * 60, // 1 day
+    autoRemove: 'native'
+  }),
   secret: process.env.REPL_ID || 'roomcraft-secret',
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
   cookie: {
     secure: false,
     httpOnly: true,
-    maxAge: 86400000,
+    maxAge: 24 * 60 * 60 * 1000,
     path: '/',
     sameSite: 'lax'
   },

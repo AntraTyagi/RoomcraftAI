@@ -7,13 +7,13 @@ import { User } from "./models/User";
 const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
 export function setupAuth(app: Express) {
-  // Serialize the complete user object
+  // Serialize user ID for the session
   passport.serializeUser((user: any, done) => {
     console.log('Serializing user:', user._id);
     done(null, user._id);
   });
 
-  // Deserialize with detailed logging
+  // Deserialize user from the session ID
   passport.deserializeUser(async (id: string, done) => {
     try {
       console.log('Deserializing user:', id);
@@ -91,7 +91,7 @@ export function setupAuth(app: Express) {
         res.cookie('auth_token', token, {
           httpOnly: true,
           secure: false,
-          maxAge: 86400000,
+          maxAge: 24 * 60 * 60 * 1000,
           path: '/',
           sameSite: 'lax'
         });
