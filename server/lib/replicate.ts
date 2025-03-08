@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 
 const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
-async function removeExistingFurniture(image: string): Promise<string> {
+export async function removeExistingFurniture(image: string): Promise<string> {
   if (!process.env.REPLICATE_API_KEY) {
     throw new Error("Replicate API key is missing");
   }
@@ -91,11 +91,6 @@ export async function generateDesign(
   }
 
   try {
-    // First, remove existing furniture
-    console.log('Step 1: Removing existing furniture');
-    const emptyRoomUrl = await removeExistingFurniture(image);
-    console.log('Empty room generated, proceeding with design generation');
-
     // Construct a detailed prompt incorporating all preferences
     let designPrompt = `Transform this ${roomType?.toLowerCase() || 'room'} into a ${style.toLowerCase()} style interior design.`;
 
@@ -122,7 +117,7 @@ export async function generateDesign(
         input: {
           prompt: designPrompt,
           negative_prompt: "blurry, low quality, distorted, unrealistic",
-          image: emptyRoomUrl, // Use the empty room as input
+          image: image,
           num_outputs: 2,
           guidance_scale: 7.5,
           num_inference_steps: 50,

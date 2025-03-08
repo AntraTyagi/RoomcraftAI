@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { generateDesign } from "./lib/replicate";
 import { setupAuth } from "./auth";
 import { inpaintFurniture } from "./lib/replicate-inpainting";
+import { removeExistingFurniture } from "./lib/replicate";
 import { User } from "./models/User";
 import { CreditHistory } from "./models/CreditHistory";
 import { authMiddleware } from "./middleware/auth";
@@ -17,7 +18,7 @@ export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Helper function to handle credit deduction
-  const deductUserCredits = async (userId: string, operationType: 'generate' | 'inpaint') => {
+  const deductUserCredits = async (userId: string, operationType: 'generate' | 'inpaint' | 'unstage') => {
     try {
       // Check user credits first
       console.log(`Checking credits for user ${userId}`);
@@ -36,7 +37,7 @@ export function registerRoutes(app: Express): Server {
       const creditHistory = await CreditHistory.create({
         userId,
         operationType,
-        description: `${operationType === 'generate' ? 'Design generation' : 'Inpainting operation'}`,
+        description: `${operationType === 'generate' ? 'Design generation' : operationType === 'inpaint' ? 'Inpainting operation' : 'Furniture removal'}`,
         creditsUsed: 1
       });
       console.log(`Credit history created: ${creditHistory._id}`);
@@ -57,23 +58,53 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
-  app.get("/api/credits/balance", authMiddleware, async (req: any, res) => {
+  // New endpoint for unstaging (furniture removal)
+  app.post("/api/unstage", authMiddleware, async (req: any, res) => {
     try {
-      console.log("Fetching credit balance for user:", req.user.id);
-      const user = await User.findById(req.user.id);
-      if (!user) {
-        console.log("User not found when fetching credits");
-        return res.status(404).json({ message: "User not found" });
+      console.log("Unstage request received from user:", req.user.id);
+      const { image } = req.body;
+
+      if (!image) {
+        return res.status(400).json({
+          message: "Image is required",
+        });
       }
-      console.log("Current credit balance:", user.credits);
-      res.json({ credits: user.credits });
-    } catch (error) {
-      console.error("Error fetching credit balance:", error);
-      res.status(500).json({ message: "Error fetching credit balance" });
+
+      // Remove furniture first
+      console.log("Removing furniture from image");
+      const emptyRoomUrl = await removeExistingFurniture(image);
+
+      // Only deduct credits if removal was successful
+      try {
+        await deductUserCredits(req.user.id, 'unstage');
+        console.log("Credits successfully deducted for unstaging");
+
+        // Refresh credit balance
+        const protocol = req.protocol;
+        const host = req.get('host');
+        const baseUrl = `${protocol}://${host}`;
+        await axios.get(`${baseUrl}/api/credits/balance`, { 
+          headers: { 
+            Authorization: req.headers.authorization 
+          }
+        });
+      } catch (error: any) {
+        console.error("Credit deduction failed:", error);
+      }
+
+      res.json({ emptyRoomUrl });
+    } catch (error: any) {
+      console.error("Unstage error:", error);
+      if (error.message === "Insufficient credits") {
+        return res.status(403).json({ message: "Insufficient credits" });
+      }
+      res.status(500).json({
+        message: error.message || "Failed to remove furniture",
+      });
     }
   });
 
-  // Protected route for generation
+  // Modified generate endpoint to use the unstaging result
   app.post("/api/generate", authMiddleware, async (req: any, res) => {
     try {
       console.log("Generate request received from user:", req.user.id);
@@ -85,9 +116,18 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Generate designs first
+      // First, call the unstaging endpoint to get an empty room
+      const unstageResponse = await axios.post(
+        `${req.protocol}://${req.get('host')}/api/unstage`,
+        { image },
+        { headers: { Authorization: req.headers.authorization } }
+      );
+
+      const emptyRoomUrl = unstageResponse.data.emptyRoomUrl;
+
+      // Generate designs using the empty room
       console.log("Generating designs with params:", { style, roomType, colorTheme });
-      const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
+      const designs = await generateDesign(emptyRoomUrl, style, roomType, colorTheme, prompt);
 
       if (!designs || !designs.length) {
         throw new Error("No designs were generated");
@@ -102,7 +142,6 @@ export function registerRoutes(app: Express): Server {
         const protocol = req.protocol;
         const host = req.get('host');
         const baseUrl = `${protocol}://${host}`;
-        console.log("Making request to refresh credits at:", `${baseUrl}/api/credits/balance`);
         await axios.get(`${baseUrl}/api/credits/balance`, { 
           headers: { 
             Authorization: req.headers.authorization 
@@ -111,9 +150,6 @@ export function registerRoutes(app: Express): Server {
 
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
-        // Even if credit deduction fails, we still return the generated designs
-        // but log the error for investigation
-        console.error("Credit deduction failed but designs were generated:", error);
       }
 
       console.log("Designs generated successfully:", designs.length);
