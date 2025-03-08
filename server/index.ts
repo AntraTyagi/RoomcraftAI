@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import session from 'express-session';
 import MemoryStore from 'memorystore';
+import passport from 'passport';
 
 const app = express();
 
@@ -19,8 +20,8 @@ const sessionStore = new MemoryStoreSession({
   checkPeriod: 86400000 // prune expired entries every 24h
 });
 
-// Setup session middleware before any routes
-app.use(session({
+// Setup session middleware before passport
+const sessionMiddleware = session({
   store: sessionStore,
   secret: process.env.REPL_ID || 'roomcraft-secret',
   resave: true,
@@ -33,9 +34,27 @@ app.use(session({
     sameSite: 'lax'
   },
   name: 'roomcraft.sid'
-}));
+});
 
-// 2. Request logging middleware
+// Initialize session first
+app.use(sessionMiddleware);
+
+// Initialize passport after session
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Debug middleware to track session state
+app.use((req, res, next) => {
+  console.log('\n=== Session Debug ===');
+  console.log('Session ID:', req.sessionID);
+  console.log('Session:', req.session);
+  console.log('Is Authenticated:', req.isAuthenticated());
+  console.log('User:', req.user ? 'Present' : 'None');
+  console.log('===================\n');
+  next();
+});
+
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -65,10 +84,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // 3. Register routes which will set up auth middleware
+  // Register routes which will set up auth middleware
   const server = registerRoutes(app);
 
-  // 4. Error handling middleware
+  // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error("Error:", err);
     const status = err.status || err.statusCode || 500;
@@ -76,7 +95,7 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  // 5. Setup Vite or static serving
+  // Setup Vite or static serving
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
