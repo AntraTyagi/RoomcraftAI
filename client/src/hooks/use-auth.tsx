@@ -42,12 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check for existing token on mount
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    console.log("Initial auth check:", { hasToken: Boolean(token) });
-  }, []);
-
   const {
     data: user,
     error,
@@ -56,25 +50,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
 
   const refreshCredits = async () => {
-    console.log("Refreshing user credits...");
     try {
       const response = await apiRequest("GET", "/api/credits/balance");
       const data = await response.json();
-      console.log("New credit balance:", data.credits);
 
       if (user) {
-        const updatedUser = {
+        queryClient.setQueryData(["/api/user"], {
           ...user,
           credits: data.credits,
-        };
-        console.log("Updating cached user data:", updatedUser);
-        queryClient.setQueryData(["/api/user"], updatedUser);
+        });
       }
     } catch (error) {
       console.error("Failed to refresh credits:", error);
@@ -88,13 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      console.log("Attempting login...");
       const res = await apiRequest("POST", "/api/login", credentials);
-      const data = await res.json();
-      return data;
+      return res.json();
     },
     onSuccess: (data: LoginResponse) => {
-      console.log("Login successful, setting token and user data");
       localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
       refreshCredits();
@@ -105,8 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
-      console.error("Login failed:", error);
       localStorage.removeItem('auth_token');
+      queryClient.setQueryData(["/api/user"], null);
       toast({
         title: "Login failed",
         description: error.message,
@@ -117,20 +103,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      console.log("Logging out...");
       await apiRequest("POST", "/api/logout");
       localStorage.removeItem('auth_token');
+      queryClient.setQueryData(["/api/user"], null);
     },
     onSuccess: () => {
-      console.log("Logout successful, clearing user data");
-      queryClient.setQueryData(["/api/user"], null);
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
     },
     onError: (error: Error) => {
-      console.error("Logout failed:", error);
       toast({
         title: "Logout failed",
         description: error.message,

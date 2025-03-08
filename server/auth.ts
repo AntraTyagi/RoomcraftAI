@@ -2,30 +2,40 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import jwt from 'jsonwebtoken';
+import session from 'express-session';
 import { User } from "./models/User";
 import { sendVerificationEmail, generateVerificationToken, verifyEmailTransporter } from './lib/email';
 
 const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
 export function setupAuth(app: Express) {
-  app.use(passport.initialize());
+  // Setup session middleware
+  app.use(session({
+    secret: JWT_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // Set to true if using HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
 
-  // Test route for email configuration
-  app.get("/api/test-email-config", async (req, res) => {
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  // Serialize user for the session
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+
+  // Deserialize user from the session
+  passport.deserializeUser(async (id: string, done) => {
     try {
-      const result = await verifyEmailTransporter();
-      res.json({ 
-        status: 'success',
-        message: 'Email configuration is working',
-        details: result
-      });
-    } catch (error: any) {
-      console.error('Email configuration test failed:', error);
-      res.status(500).json({ 
-        status: 'error',
-        message: 'Email configuration test failed',
-        error: error.message
-      });
+      const user = await User.findById(id);
+      done(null, user);
+    } catch (err) {
+      done(err);
     }
   });
 
@@ -55,7 +65,7 @@ export function setupAuth(app: Express) {
       }
 
       const userForToken = {
-        id: user._id.toString(),
+        id: user._id,
         email: user.email,
         username: user.email,
         name: user.name,
@@ -207,7 +217,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", { session: false }, (err, user, info) => {
+    passport.authenticate("local", { session: true }, (err, user, info) => {
       if (err) {
         console.error('Login error:', err);
         return next(err);
@@ -218,24 +228,46 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
 
-      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
-      console.log('Login successful - Token generated');
-
-      res.json({
-        token: token,
-        user: {
-          id: user.id,
-          email: user.email,
-          username: user.email,
-          name: user.name,
-          credits: user.credits
+      // Log the user in
+      req.logIn(user, (err) => {
+        if (err) {
+          console.error('Session creation error:', err);
+          return next(err);
         }
+
+        const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+        console.log('Login successful - Token generated');
+
+        // Set cookie for session persistence
+        res.cookie('auth_token', token, {
+          httpOnly: true,
+          secure: false, // Set to true if using HTTPS
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
+
+        res.json({
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            username: user.email,
+            name: user.name,
+            credits: user.credits
+          }
+        });
       });
     })(req, res, next);
   });
 
   app.post("/api/logout", (req, res) => {
-    res.json({ message: "Logged out successfully" });
+    req.logout((err) => {
+      if (err) {
+        console.error('Logout error:', err);
+        return res.status(500).json({ message: "Error during logout" });
+      }
+      res.clearCookie('auth_token');
+      res.json({ message: "Logged out successfully" });
+    });
   });
 
   // Debug middleware
