@@ -35,6 +35,7 @@ export async function apiRequest(
       // Clear token on auth error
       console.error("Authentication error, clearing token");
       localStorage.removeItem('auth_token');
+      queryClient.setQueryData(["/api/user"], null);
       const error = new Error("Authentication required");
       error.name = "AuthError";
       throw error;
@@ -48,32 +49,38 @@ export async function apiRequest(
 
 export function getQueryFn(options: GetQueryFnOptions = {}) {
   return async ({ queryKey }: { queryKey: QueryKey }) => {
-    const token = localStorage.getItem('auth_token');
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+    try {
+      const token = localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const res = await fetch(queryKey[0] as string, { 
-      headers,
-      credentials: 'include' // Include cookies for session persistence
-    });
-
-    if (!res.ok) {
-      if (res.status === 401) {
-        localStorage.removeItem('auth_token');
-        if (options.on401 === "returnNull") {
-          return null;
-        }
-        throw new Error("Authentication required");
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-      throw new Error(await res.text());
-    }
 
-    return res.json();
+      const res = await fetch(queryKey[0] as string, { 
+        headers,
+        credentials: 'include' // Include cookies for session persistence
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem('auth_token');
+          queryClient.setQueryData(["/api/user"], null);
+          if (options.on401 === "returnNull") {
+            return null;
+          }
+          throw new Error("Authentication required");
+        }
+        throw new Error(await res.text());
+      }
+
+      return res.json();
+    } catch (error) {
+      console.error("Query error:", error);
+      throw error;
+    }
   };
 }
 

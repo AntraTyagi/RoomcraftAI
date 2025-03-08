@@ -166,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Refresh credits whenever user data changes
   useEffect(() => {
     if (user) {
       console.log("User data updated, refreshing credits");
