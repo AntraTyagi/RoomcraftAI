@@ -10,7 +10,11 @@ export function setupAuth(app: Express) {
   // Serialize just the user ID
   passport.serializeUser((user: any, done) => {
     const userId = user._id.toString();
-    console.log('Serializing user:', userId);
+    console.log("Serializing user:", {
+      userId,
+      email: user.email,
+      sessionId: (user as any).sessionID
+    });
     done(null, userId);
   });
 
@@ -23,7 +27,11 @@ export function setupAuth(app: Express) {
         console.log('User not found during deserialization');
         return done(null, false);
       }
-      console.log('Found user:', user.email);
+      console.log('Found user:', {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name
+      });
       done(null, user);
     } catch (err) {
       console.error('Deserialization error:', err);
@@ -132,7 +140,11 @@ export function setupAuth(app: Express) {
     console.log('User data request:', {
       isAuthenticated: req.isAuthenticated(),
       sessionID: req.sessionID,
-      user: req.user ? 'exists' : 'none'
+      user: req.user ? {
+        id: (req.user as any)._id,
+        email: (req.user as any).email,
+        name: (req.user as any).name
+      } : 'none'
     });
 
     if (!req.isAuthenticated()) {

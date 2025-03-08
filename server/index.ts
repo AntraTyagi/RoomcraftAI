@@ -24,15 +24,25 @@ const sessionMiddleware = session({
     mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
     collectionName: 'sessions',
     ttl: 24 * 60 * 60, // 1 day
-    autoRemove: 'native'
+    autoRemove: 'native',
+    touchAfter: 24 * 3600, // Disable automatic updates for sessions that haven't changed
+    mongoOptions: {
+      useUnifiedTopology: true
+    },
+    stringify: false, // Store session data as MongoDB native types
+    crypto: {
+      secret: process.env.REPL_ID || 'roomcraft-secret'
+    }
   }),
   secret: process.env.REPL_ID || 'roomcraft-secret',
-  resave: false,
-  saveUninitialized: false,
+  resave: true, // Changed to true to ensure session persistence
+  saveUninitialized: true, // Changed to true to ensure new sessions are saved
   cookie: {
-    secure: false,
+    secure: false, // Must be false for non-HTTPS Replit environment
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax',
+    path: '/'
   },
   name: 'roomcraft.sid'
 });
@@ -48,9 +58,25 @@ app.use(passport.session());
 app.use((req, res, next) => {
   console.log('\n=== Session Debug ===');
   console.log('Session ID:', req.sessionID);
-  console.log('Session:', req.session);
+  console.log('Session Data:', {
+    ...req.session,
+    cookie: {
+      ...req.session.cookie,
+      expires: req.session.cookie.expires,
+      maxAge: req.session.cookie.maxAge
+    }
+  });
   console.log('Is Authenticated:', req.isAuthenticated());
-  console.log('User:', req.user ? 'Present' : 'None');
+  console.log('User:', req.user ? {
+    id: req.user._id,
+    email: req.user.email,
+    name: req.user.name
+  } : 'None');
+  console.log('Cookies:', req.cookies);
+  console.log('Auth Headers:', {
+    authorization: req.headers.authorization,
+    cookie: req.headers.cookie
+  });
   console.log('===================\n');
   next();
 });
