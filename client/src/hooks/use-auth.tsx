@@ -42,14 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check for token on mount
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      queryClient.setQueryData(["/api/user"], null);
-    }
-  }, []);
-
   const {
     data: user,
     error,
@@ -58,9 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
   });
 
   const refreshCredits = async () => {
@@ -76,24 +65,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to refresh credits:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update credit balance",
-        variant: "destructive",
-      });
     }
   };
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/login", credentials);
-      const data = await res.json();
-      return data;
+      return res.json();
     },
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
-      refreshCredits();
       const firstName = data.user.name.split(' ')[0];
       toast({
         title: "Login successful",
@@ -102,7 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onError: (error: Error) => {
       localStorage.removeItem('auth_token');
-      queryClient.setQueryData(["/api/user"], null);
       toast({
         title: "Login failed",
         description: error.message,
@@ -135,8 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/register", credentials);
-      const data = await res.json();
-      return data;
+      return res.json();
     },
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);
