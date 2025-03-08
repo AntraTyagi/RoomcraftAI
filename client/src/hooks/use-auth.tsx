@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext } from "react";
+import { ReactNode, createContext, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -41,6 +41,15 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      // If we have a token, trigger a user data fetch
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    }
+  }, []);
 
   const {
     data: user,

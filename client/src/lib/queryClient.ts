@@ -14,7 +14,7 @@ export async function apiRequest(
     "Content-Type": "application/json",
   };
 
-  // Add JWT token to headers if available
+  // Get token from localStorage
   const token = localStorage.getItem('auth_token');
   if (!token) {
     console.warn("No auth token found in localStorage");
@@ -27,12 +27,12 @@ export async function apiRequest(
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
-    credentials: 'include' // Include cookies for session persistence
+    credentials: 'include' // Important: Include cookies for session persistence
   });
 
   if (!response.ok) {
     if (response.status === 401) {
-      // Clear token on auth error
+      // Clear token and user data on auth error
       console.error("Authentication error, clearing token");
       localStorage.removeItem('auth_token');
       queryClient.setQueryData(["/api/user"], null);
@@ -61,7 +61,7 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
 
       const res = await fetch(queryKey[0] as string, { 
         headers,
-        credentials: 'include' // Include cookies for session persistence
+        credentials: 'include' // Important: Include cookies for session persistence
       });
 
       if (!res.ok) {
@@ -84,11 +84,12 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
   };
 }
 
+// Configure the QueryClient with proper defaults
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn(),
-      staleTime: 0,
+      staleTime: 0, // Consider all data stale immediately
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       refetchOnMount: true,
