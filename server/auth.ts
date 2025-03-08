@@ -3,27 +3,46 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import jwt from 'jsonwebtoken';
 import session from 'express-session';
+import MemoryStore from 'memorystore';
 import { User } from "./models/User";
 
 const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
 export function setupAuth(app: Express) {
-  // Basic session setup that we know works
+  // Setup MemoryStore for Replit environment
+  const MemoryStoreSession = MemoryStore(session);
+  const sessionStore = new MemoryStoreSession({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  });
+
   app.use(session({
+    store: sessionStore,
     secret: JWT_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // Important: Keep this false for Replit
+      secure: false, // Must be false for Replit
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      path: '/',
+      sameSite: 'lax'
+    },
+    name: 'roomcraft.sid' // Custom session name
   }));
 
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Simple serialization that worked before
+  // Debug middleware
+  app.use((req, res, next) => {
+    console.log('Session Debug:', {
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? 'exists' : 'none'
+    });
+    next();
+  });
+
   passport.serializeUser((user: any, done) => {
     console.log('Serializing user:', user._id);
     done(null, user._id);
@@ -35,6 +54,7 @@ export function setupAuth(app: Express) {
       const user = await User.findById(id);
       done(null, user);
     } catch (err) {
+      console.error('Deserialization error:', err);
       done(err);
     }
   });
@@ -83,11 +103,13 @@ export function setupAuth(app: Express) {
           email: user.email
         }, JWT_SECRET, { expiresIn: '24h' });
 
-        // Important: Set both cookie and send token
+        // Set both session cookie and JWT token cookie
         res.cookie('auth_token', token, {
           httpOnly: true,
-          secure: false, // Keep false for Replit
-          maxAge: 24 * 60 * 60 * 1000
+          secure: false, // Must be false for Replit
+          maxAge: 24 * 60 * 60 * 1000,
+          path: '/',
+          sameSite: 'lax'
         });
 
         res.json({
@@ -114,7 +136,6 @@ export function setupAuth(app: Express) {
     });
   });
 
-  // Simple middleware to check auth status
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
