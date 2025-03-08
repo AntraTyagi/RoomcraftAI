@@ -24,25 +24,17 @@ const sessionMiddleware = session({
     mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
     collectionName: 'sessions',
     ttl: 24 * 60 * 60, // 1 day
-    autoRemove: 'native',
-    touchAfter: 24 * 3600, // Disable automatic updates for sessions that haven't changed
-    mongoOptions: {
-      useUnifiedTopology: true
-    },
-    stringify: false, // Store session data as MongoDB native types
-    crypto: {
-      secret: process.env.REPL_ID || 'roomcraft-secret'
-    }
+    autoRemove: 'native'
   }),
   secret: process.env.REPL_ID || 'roomcraft-secret',
-  resave: true, // Changed to true to ensure session persistence
-  saveUninitialized: true, // Changed to true to ensure new sessions are saved
+  resave: false,
+  saveUninitialized: false,
   cookie: {
-    secure: false, // Must be false for non-HTTPS Replit environment
+    secure: false,
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax',
-    path: '/'
+    maxAge: 24 * 60 * 60 * 1000,
+    path: '/',
+    sameSite: 'lax'
   },
   name: 'roomcraft.sid'
 });
@@ -54,32 +46,6 @@ app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Debug middleware to track session state
-app.use((req, res, next) => {
-  console.log('\n=== Session Debug ===');
-  console.log('Session ID:', req.sessionID);
-  console.log('Session Data:', {
-    ...req.session,
-    cookie: {
-      ...req.session.cookie,
-      expires: req.session.cookie.expires,
-      maxAge: req.session.cookie.maxAge
-    }
-  });
-  console.log('Is Authenticated:', req.isAuthenticated());
-  console.log('User:', req.user ? {
-    id: req.user._id,
-    email: req.user.email,
-    name: req.user.name
-  } : 'None');
-  console.log('Cookies:', req.cookies);
-  console.log('Auth Headers:', {
-    authorization: req.headers.authorization,
-    cookie: req.headers.cookie
-  });
-  console.log('===================\n');
-  next();
-});
 
 // Request logging middleware
 app.use((req, res, next) => {
