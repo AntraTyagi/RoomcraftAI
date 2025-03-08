@@ -2,22 +2,43 @@ import fetch from "node-fetch";
 
 const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
+interface ReplicateResponse {
+  id: string;
+  status: string;
+  output?: string | string[];
+  error?: string;
+  urls: {
+    get: string;
+  };
+}
+
 export async function removeExistingFurniture(image: string): Promise<string> {
-  if (!process.env.REPLICATE_API_KEY) {
+  const token = process.env.REPLICATE_API_KEY?.trim();
+  if (!token) {
     throw new Error("Replicate API key is missing");
   }
 
   try {
-    // Convert base64 to a temporary URL using data URI
-    const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
+    console.log("Starting furniture removal with unstaging model");
 
-    console.log('Sending request to Replicate unstaging model');
+    // Handle both base64 and URL formats
+    let imageUrl = image;
+    if (image.startsWith('data:')) {
+      // If it's already a data URL, use it as is
+      imageUrl = image;
+    } else if (image.match(/^[A-Za-z0-9+/=]+$/)) {
+      // If it's a raw base64 string, convert to data URL
+      imageUrl = `data:image/jpeg;base64,${image}`;
+    }
+    // Otherwise assume it's already a URL
+
+    console.log("Sending request to Replicate unstaging model");
 
     const response = await fetch(`${REPLICATE_API_URL}/predictions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+        Authorization: `Token ${token}`,
       },
       body: JSON.stringify({
         version: "d41e1770837f167a28f948c6bc81baefbbaa9dfa278d6f528ce40b5a61be9b74",
@@ -36,14 +57,14 @@ export async function removeExistingFurniture(image: string): Promise<string> {
       throw new Error(`Replicate API error: ${response.status} ${errorText}`);
     }
 
-    const prediction = await response.json();
+    const prediction = (await response.json()) as ReplicateResponse;
     console.log("Unstaging prediction created:", prediction.id);
 
     // Poll for results
     const getResult = async (url: string): Promise<string> => {
       const result = await fetch(url, {
         headers: {
-          Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+          Authorization: `Token ${token}`,
         },
       });
 
@@ -53,8 +74,8 @@ export async function removeExistingFurniture(image: string): Promise<string> {
         throw new Error("Failed to get prediction result");
       }
 
-      const data = await result.json();
-      console.log("Unstaging prediction status:", data.status, "Output:", data.output);
+      const data = (await result.json()) as ReplicateResponse;
+      console.log("Unstaging prediction status:", data.status);
 
       if (data.status === "succeeded") {
         if (!data.output || typeof data.output !== 'string') {
@@ -86,11 +107,23 @@ export async function generateDesign(
   colorTheme?: string,
   prompt?: string
 ): Promise<string[]> {
-  if (!process.env.REPLICATE_API_KEY) {
+  const token = process.env.REPLICATE_API_KEY?.trim();
+  if (!token) {
     throw new Error("Replicate API key is missing");
   }
 
   try {
+    // Handle both base64 and URL formats
+    let imageUrl = image;
+    if (image.startsWith('data:')) {
+      // If it's already a data URL, use it as is
+      imageUrl = image;
+    } else if (image.match(/^[A-Za-z0-9+/=]+$/)) {
+      // If it's a raw base64 string, convert to data URL
+      imageUrl = `data:image/jpeg;base64,${image}`;
+    }
+    // Otherwise assume it's already a URL
+
     // Construct a detailed prompt incorporating all preferences
     let designPrompt = `Transform this ${roomType?.toLowerCase() || 'room'} into a ${style.toLowerCase()} style interior design.`;
 
@@ -110,14 +143,14 @@ export async function generateDesign(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+        Authorization: `Token ${token}`,
       },
       body: JSON.stringify({
         version: "c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316",
         input: {
           prompt: designPrompt,
           negative_prompt: "blurry, low quality, distorted, unrealistic",
-          image: image,
+          image: imageUrl,
           num_outputs: 2,
           guidance_scale: 7.5,
           num_inference_steps: 50,
@@ -134,14 +167,14 @@ export async function generateDesign(
       throw new Error(`Replicate API error: ${response.status} ${errorText}`);
     }
 
-    const prediction = await response.json();
+    const prediction = (await response.json()) as ReplicateResponse;
     console.log("Design prediction created:", prediction.id);
 
     // Poll for results
     const getResult = async (url: string): Promise<string[]> => {
       const result = await fetch(url, {
         headers: {
-          Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+          Authorization: `Token ${token}`,
         },
       });
 
@@ -151,11 +184,11 @@ export async function generateDesign(
         throw new Error("Failed to get prediction result");
       }
 
-      const data = await result.json();
-      console.log("Design prediction status:", data.status, "Output:", data.output);
+      const data = (await result.json()) as ReplicateResponse;
+      console.log("Design prediction status:", data.status);
 
       if (data.status === "succeeded") {
-        if (!Array.isArray(data.output) || data.output.length === 0) {
+        if (!Array.isArray(data.output)) {
           throw new Error("Invalid output format from Replicate API");
         }
         return data.output;
