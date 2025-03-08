@@ -23,22 +23,45 @@ export default function Generate() {
 
   const generateMutation = useMutation({
     mutationFn: async () => {
+      console.log("=== Starting design generation ===");
+
       if (!user) {
+        console.error("Authentication missing");
         throw new Error("Please login to generate designs");
       }
 
       if (!uploadedImage || !selectedStyle || !selectedRoom || !selectedTheme) {
+        console.error("Missing required fields:", {
+          hasImage: Boolean(uploadedImage),
+          hasStyle: Boolean(selectedStyle),
+          hasRoom: Boolean(selectedRoom),
+          hasTheme: Boolean(selectedTheme)
+        });
         throw new Error("Please fill in all required fields");
       }
+
+      console.log("Preparing API request:", {
+        style: selectedStyle,
+        roomType: selectedRoom,
+        colorTheme: selectedTheme,
+        hasPrompt: Boolean(prompt),
+        imageSize: uploadedImage?.length, //Added ? to handle null case
+      });
+
+      const token = localStorage.getItem('auth_token');
+      console.log("Auth token check:", {
+        exists: Boolean(token),
+        preview: token ? `${token.substring(0, 4)}...${token.substring(token.length - 4)}` : 'missing'
+      });
 
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('auth_token')}`
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          image: uploadedImage.split(',')[1],
+          image: uploadedImage?.split(',')[1], //Added ? to handle null case
           style: selectedStyle,
           roomType: selectedRoom,
           colorTheme: selectedTheme,
@@ -46,15 +69,33 @@ export default function Generate() {
         })
       });
 
+      console.log("API Response:", {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error("API Error:", {
+          status: response.status,
+          error: errorText
+        });
         throw new Error(errorText);
       }
 
       const data = await response.json();
+      console.log("API Success:", {
+        hasDesigns: Boolean(data.designs),
+        designCount: data.designs?.length
+      });
+
       return data;
     },
     onSuccess: (data) => {
+      console.log("Generation successful:", {
+        designCount: data.designs.length
+      });
       setGeneratedDesigns(data.designs);
       refreshCredits();
       toast({
@@ -63,6 +104,7 @@ export default function Generate() {
       });
     },
     onError: (error: Error) => {
+      console.error("Generation failed:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to generate designs. Please try again.",
