@@ -8,6 +8,19 @@ import { User } from "./models/User";
 
 const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
+// Add proper type declaration for Express User
+declare global {
+  namespace Express {
+    interface User {
+      _id: string;
+      email: string;
+      name: string;
+      credits: number;
+      isEmailVerified: boolean;
+    }
+  }
+}
+
 export function setupAuth(app: Express) {
   // Setup MemoryStore for Replit environment
   const MemoryStoreSession = MemoryStore(session);
@@ -15,11 +28,12 @@ export function setupAuth(app: Express) {
     checkPeriod: 86400000 // prune expired entries every 24h
   });
 
+  // Setup session middleware
   app.use(session({
     store: sessionStore,
     secret: JWT_SECRET,
-    resave: false,
-    saveUninitialized: false,
+    resave: true, // Changed to true to ensure session persistence
+    saveUninitialized: true, // Changed to true to ensure new sessions are saved
     cookie: {
       secure: false, // Must be false for Replit
       httpOnly: true,
@@ -33,17 +47,18 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Debug middleware
+  // Debug middleware to track session state
   app.use((req, res, next) => {
     console.log('Session Debug:', {
       sessionID: req.sessionID,
       isAuthenticated: req.isAuthenticated(),
-      user: req.user ? 'exists' : 'none'
+      user: req.user ? 'exists' : 'none',
+      session: req.session
     });
     next();
   });
 
-  passport.serializeUser((user: any, done) => {
+  passport.serializeUser((user: Express.User, done) => {
     console.log('Serializing user:', user._id);
     done(null, user._id);
   });
@@ -52,7 +67,19 @@ export function setupAuth(app: Express) {
     try {
       console.log('Deserializing user:', id);
       const user = await User.findById(id);
-      done(null, user);
+      if (!user) {
+        console.log('User not found during deserialization');
+        return done(null, false);
+      }
+      // Transform MongoDB document to plain object with correct typing
+      const userObject = {
+        _id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        credits: user.credits,
+        isEmailVerified: user.isEmailVerified
+      };
+      done(null, userObject);
     } catch (err) {
       console.error('Deserialization error:', err);
       done(err);
@@ -81,7 +108,16 @@ export function setupAuth(app: Express) {
         return done(null, false, { message: "Please verify your email before logging in" });
       }
 
-      return done(null, user);
+      // Transform MongoDB document to plain object with correct typing
+      const userObject = {
+        _id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        credits: user.credits,
+        isEmailVerified: user.isEmailVerified
+      };
+
+      return done(null, userObject);
     } catch (err) {
       return done(err);
     }
