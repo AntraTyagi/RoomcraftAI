@@ -5,7 +5,7 @@ import {
   UseMutationResult,
   useQueryClient,
 } from "@tanstack/react-query";
-import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
+import { getQueryFn, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -42,6 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Check for token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      queryClient.setQueryData(["/api/user"], null);
+    }
+  }, []);
+
   const {
     data: user,
     error,
@@ -56,19 +64,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const refreshCredits = async () => {
-    console.log("Refreshing user credits...");
     try {
       const response = await apiRequest("GET", "/api/credits/balance");
       const data = await response.json();
-      console.log("New credit balance:", data.credits);
 
       if (user) {
-        const updatedUser = {
+        queryClient.setQueryData(["/api/user"], {
           ...user,
           credits: data.credits,
-        };
-        console.log("Updating cached user data:", updatedUser);
-        queryClient.setQueryData(["/api/user"], updatedUser);
+        });
       }
     } catch (error) {
       console.error("Failed to refresh credits:", error);
@@ -97,6 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      localStorage.removeItem('auth_token');
+      queryClient.setQueryData(["/api/user"], null);
       toast({
         title: "Login failed",
         description: error.message,
@@ -149,12 +155,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
-
-  useEffect(() => {
-    if (user) {
-      refreshCredits();
-    }
-  }, [user?.id]);
 
   return (
     <AuthContext.Provider
