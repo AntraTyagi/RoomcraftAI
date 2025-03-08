@@ -31,19 +31,44 @@ export default function Generate() {
         throw new Error("Please login to generate designs");
       }
 
-      const res = await apiRequest("POST", "/api/generate", {
-        image: uploadedImage,
-        style: selectedStyle,
-        roomType: selectedRoom,
-        colorTheme: selectedTheme,
-        prompt,
-      });
-
-      if (!res.ok) {
-        throw new Error(await res.text());
+      if (!uploadedImage) {
+        throw new Error("Please upload an image first");
       }
 
-      return res.json();
+      const imageBase64 = uploadedImage.split(',')[1];
+
+      try {
+        // Step 1: Call the unstaging endpoint
+        const unstageRes = await apiRequest("POST", "/api/unstage", {
+          image: imageBase64
+        });
+
+        if (!unstageRes.ok) {
+          const errorText = await unstageRes.text();
+          throw new Error(errorText || "Failed to remove furniture");
+        }
+
+        const { emptyRoomUrl } = await unstageRes.json();
+
+        // Step 2: Call the generate endpoint with the empty room URL
+        const generateRes = await apiRequest("POST", "/api/generate", {
+          image: emptyRoomUrl,
+          style: selectedStyle,
+          roomType: selectedRoom,
+          colorTheme: selectedTheme,
+          prompt,
+        });
+
+        if (!generateRes.ok) {
+          const errorText = await generateRes.text();
+          throw new Error(errorText || "Failed to generate designs");
+        }
+
+        return generateRes.json();
+      } catch (error) {
+        console.error("Generation error:", error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
       setGeneratedDesigns(data.designs);
@@ -54,6 +79,7 @@ export default function Generate() {
       });
     },
     onError: (error: Error) => {
+      console.error("Generation error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to generate designs. Please try again.",
@@ -186,7 +212,7 @@ export default function Generate() {
           {generateMutation.isPending && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
-          Generate Designs
+          {generateMutation.isPending ? "Generating Designs..." : "Generate Designs"}
         </Button>
       </Card>
 
