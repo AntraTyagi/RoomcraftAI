@@ -16,16 +16,15 @@ interface ReplicateResponse {
 function getValidatedToken(): string {
   const token = process.env.REPLICATE_API_KEY;
   if (!token) {
+    console.error("Replicate API key is not found in environment");
     throw new Error("Replicate API key is missing");
   }
 
-  // Remove any whitespace and validate format
-  const cleanToken = token.trim();
-  if (!cleanToken.match(/^r8_[a-zA-Z0-9]{32,}$/)) {
-    throw new Error("Invalid Replicate API key format");
-  }
+  // Debug log (without exposing the full token)
+  const tokenPreview = token.substring(0, 5) + "..." + token.substring(token.length - 5);
+  console.log("Found Replicate API key starting with:", tokenPreview);
 
-  return cleanToken;
+  return token;
 }
 
 async function makeReplicateRequest(endpoint: string, body: any) {
@@ -73,7 +72,8 @@ async function pollPrediction(url: string): Promise<ReplicateResponse> {
     throw new Error(`Failed to get prediction result: ${errorText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  return data as ReplicateResponse;
 }
 
 export async function removeExistingFurniture(image: string): Promise<string> {
@@ -134,6 +134,8 @@ export async function generateDesign(
   prompt?: string
 ): Promise<string[]> {
   try {
+    console.log("Starting design generation process...");
+
     // Handle both base64 and URL formats
     let imageUrl = image;
     if (image.startsWith('data:')) {
@@ -152,6 +154,8 @@ export async function generateDesign(
       designPrompt += ` Additional requirements: ${prompt}`;
     }
 
+    console.log("Submitting design generation request with prompt:", designPrompt);
+
     const prediction = await makeReplicateRequest("/predictions", {
       version: "c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316",
       input: {
@@ -165,7 +169,7 @@ export async function generateDesign(
         width: 1024,
         height: 1024,
       }
-    }) as ReplicateResponse;
+    });
 
     console.log("Design prediction created:", prediction.id);
 
