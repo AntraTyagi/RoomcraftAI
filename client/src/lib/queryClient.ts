@@ -23,11 +23,12 @@ export async function apiRequest(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  console.log(`Making ${method} request to ${url}`);
   const response = await fetch(url, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
-    credentials: 'include' // Important: Include cookies for session persistence
+    credentials: 'include', // Important: Include cookies for session persistence
   });
 
   if (!response.ok) {
@@ -50,6 +51,7 @@ export async function apiRequest(
 export function getQueryFn(options: GetQueryFnOptions = {}) {
   return async ({ queryKey }: { queryKey: QueryKey }) => {
     try {
+      console.log(`Making query request to ${queryKey[0]}`);
       const token = localStorage.getItem('auth_token');
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -66,6 +68,7 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
 
       if (!res.ok) {
         if (res.status === 401) {
+          console.error("Authentication error in query");
           localStorage.removeItem('auth_token');
           queryClient.setQueryData(["/api/user"], null);
           if (options.on401 === "returnNull") {
@@ -73,10 +76,16 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
           }
           throw new Error("Authentication required");
         }
-        throw new Error(await res.text());
+        const errorText = await res.text();
+        throw new Error(errorText);
       }
 
-      return res.json();
+      const data = await res.json();
+      console.log(`Query response from ${queryKey[0]}:`, { 
+        success: true, 
+        hasData: Boolean(data) 
+      });
+      return data;
     } catch (error) {
       console.error("Query error:", error);
       throw error;

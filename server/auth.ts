@@ -8,19 +8,6 @@ import { User } from "./models/User";
 
 const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
-// Add proper type declaration for Express User
-declare global {
-  namespace Express {
-    interface User {
-      _id: string;
-      email: string;
-      name: string;
-      credits: number;
-      isEmailVerified: boolean;
-    }
-  }
-}
-
 export function setupAuth(app: Express) {
   // Setup MemoryStore for Replit environment
   const MemoryStoreSession = MemoryStore(session);
@@ -37,7 +24,7 @@ export function setupAuth(app: Express) {
     cookie: {
       secure: false, // Must be false for Replit
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 86400000, // 24 hours
       path: '/',
       sameSite: 'lax'
     },
@@ -58,7 +45,7 @@ export function setupAuth(app: Express) {
     next();
   });
 
-  passport.serializeUser((user: Express.User, done) => {
+  passport.serializeUser((user: any, done) => {
     console.log('Serializing user:', user._id);
     done(null, user._id);
   });
@@ -71,15 +58,7 @@ export function setupAuth(app: Express) {
         console.log('User not found during deserialization');
         return done(null, false);
       }
-      // Transform MongoDB document to plain object with correct typing
-      const userObject = {
-        _id: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        credits: user.credits,
-        isEmailVerified: user.isEmailVerified
-      };
-      done(null, userObject);
+      done(null, user);
     } catch (err) {
       console.error('Deserialization error:', err);
       done(err);
@@ -101,37 +80,39 @@ export function setupAuth(app: Express) {
 
       const isValid = await user.comparePassword(password);
       if (!isValid) {
+        console.log('Invalid password for user:', email);
         return done(null, false, { message: "Invalid credentials" });
       }
 
       if (!user.isEmailVerified) {
+        console.log('Unverified email for user:', email);
         return done(null, false, { message: "Please verify your email before logging in" });
       }
 
-      // Transform MongoDB document to plain object with correct typing
-      const userObject = {
-        _id: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        credits: user.credits,
-        isEmailVerified: user.isEmailVerified
-      };
-
-      return done(null, userObject);
+      console.log('Authentication successful for:', email);
+      return done(null, user);
     } catch (err) {
+      console.error('Authentication error:', err);
       return done(err);
     }
   }));
 
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
-      if (err) return next(err);
+      if (err) {
+        console.error('Login error:', err);
+        return next(err);
+      }
       if (!user) {
+        console.log('Login failed:', info?.message);
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
 
       req.logIn(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error('Session creation error:', err);
+          return next(err);
+        }
 
         // Generate token
         const token = jwt.sign({
@@ -139,11 +120,13 @@ export function setupAuth(app: Express) {
           email: user.email
         }, JWT_SECRET, { expiresIn: '24h' });
 
+        console.log('Login successful - Token and session created for:', user.email);
+
         // Set both session cookie and JWT token cookie
         res.cookie('auth_token', token, {
           httpOnly: true,
           secure: false, // Must be false for Replit
-          maxAge: 24 * 60 * 60 * 1000,
+          maxAge: 86400000,
           path: '/',
           sameSite: 'lax'
         });
@@ -163,16 +146,31 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req, res) => {
+    console.log('Logout requested for user:', req.user);
     req.logout((err) => {
       if (err) {
+        console.error('Logout error:', err);
         return res.status(500).json({ message: "Error during logout" });
       }
       res.clearCookie('auth_token');
-      res.json({ message: "Logged out successfully" });
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Session destruction error:', err);
+          return res.status(500).json({ message: "Error during logout" });
+        }
+        console.log('Logout successful - Session and cookies cleared');
+        res.json({ message: "Logged out successfully" });
+      });
     });
   });
 
   app.get("/api/user", (req, res) => {
+    console.log('User data request:', {
+      isAuthenticated: req.isAuthenticated(),
+      sessionID: req.sessionID,
+      user: req.user ? 'exists' : 'none'
+    });
+
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
