@@ -2,6 +2,16 @@ import fetch from "node-fetch";
 
 const REPLICATE_API_URL = "https://api.replicate.com/v1";
 
+interface ReplicateResponse {
+  id: string;
+  status: string;
+  output: string[];
+  error?: string;
+  urls: {
+    get: string;
+  };
+}
+
 export async function generateDesign(
   image: string,
   style: string,
@@ -9,7 +19,8 @@ export async function generateDesign(
   colorTheme?: string,
   prompt?: string
 ): Promise<string[]> {
-  if (!process.env.REPLICATE_API_KEY) {
+  const token = process.env.REPLICATE_API_KEY?.trim();
+  if (!token) {
     throw new Error("Replicate API key is missing");
   }
 
@@ -36,7 +47,7 @@ export async function generateDesign(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+        "Authorization": `Token ${token}`,
       },
       body: JSON.stringify({
         version: "c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316",
@@ -60,14 +71,14 @@ export async function generateDesign(
       throw new Error(`Replicate API error: ${response.status} ${errorText}`);
     }
 
-    const prediction = await response.json();
+    const prediction = (await response.json()) as ReplicateResponse;
     console.log("Prediction created:", prediction.id);
 
     // Poll for results
     const getResult = async (url: string): Promise<string[]> => {
       const result = await fetch(url, {
         headers: {
-          Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+          Authorization: `Token ${token}`,
         },
       });
 
@@ -77,7 +88,7 @@ export async function generateDesign(
         throw new Error("Failed to get prediction result");
       }
 
-      const data = await result.json();
+      const data = (await result.json()) as ReplicateResponse;
       console.log("Prediction status:", data.status, "Output:", data.output);
 
       if (data.status === "succeeded") {
