@@ -17,6 +17,23 @@ export function registerRoutes(app: Express): Server {
   // 2. Set up authentication
   setupAuth(app);
 
+  // Add credit balance endpoint
+  app.get("/api/credits/balance", authMiddleware, async (req: any, res) => {
+    try {
+      console.log("Fetching credit balance for user:", req.user.id);
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        console.log("User not found when fetching credits");
+        return res.status(404).json({ message: "User not found" });
+      }
+      console.log("Current credit balance:", user.credits);
+      res.json({ credits: user.credits });
+    } catch (error) {
+      console.error("Error fetching credit balance:", error);
+      res.status(500).json({ message: "Error fetching credit balance" });
+    }
+  });
+
   // Helper function to handle credit deduction
   const deductUserCredits = async (userId: string, operationType: 'generate' | 'inpaint' | 'unstage') => {
     try {
@@ -58,6 +75,28 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
+  // Helper function to refresh credit balance
+  const refreshCreditBalance = async (req: any) => {
+    try {
+      const protocol = req.protocol;
+      const host = req.get('host');
+      const baseUrl = `${protocol}://${host}`;
+      console.log(`Refreshing credit balance at: ${baseUrl}/api/credits/balance`);
+
+      const response = await axios.get(`${baseUrl}/api/credits/balance`, { 
+        headers: { 
+          Authorization: req.headers.authorization 
+        }
+      });
+
+      console.log('Credit balance refreshed successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to refresh credit balance:', error);
+      throw new Error('Failed to refresh credit balance');
+    }
+  };
+
   // New endpoint for unstaging (furniture removal)
   app.post("/api/unstage", authMiddleware, async (req: any, res) => {
     try {
@@ -78,18 +117,10 @@ export function registerRoutes(app: Express): Server {
       try {
         await deductUserCredits(req.user.id, 'unstage');
         console.log("Credits successfully deducted for unstaging");
-
-        // Refresh credit balance
-        const protocol = req.protocol;
-        const host = req.get('host');
-        const baseUrl = `${protocol}://${host}`;
-        await axios.get(`${baseUrl}/api/credits/balance`, { 
-          headers: { 
-            Authorization: req.headers.authorization 
-          }
-        });
+        await refreshCreditBalance(req);
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
+        // Don't throw here, we still want to return the result
       }
 
       res.json({ emptyRoomUrl });
@@ -137,19 +168,10 @@ export function registerRoutes(app: Express): Server {
       try {
         await deductUserCredits(req.user.id, 'generate');
         console.log("Credits successfully deducted for generation");
-
-        // Refresh credit balance
-        const protocol = req.protocol;
-        const host = req.get('host');
-        const baseUrl = `${protocol}://${host}`;
-        await axios.get(`${baseUrl}/api/credits/balance`, { 
-          headers: { 
-            Authorization: req.headers.authorization 
-          }
-        });
-
+        await refreshCreditBalance(req);
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
+        // Don't throw here, we still want to return the designs
       }
 
       console.log("Designs generated successfully:", designs.length);
@@ -165,7 +187,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Protected route for inpainting - same logic applied here
+  // Protected route for inpainting
   app.post("/api/inpaint", authMiddleware, async (req: any, res) => {
     try {
       console.log("Inpaint request received from user:", req.user.id);
@@ -184,21 +206,10 @@ export function registerRoutes(app: Express): Server {
       try {
         await deductUserCredits(req.user.id, 'inpaint');
         console.log("Credits successfully deducted for inpainting");
-
-        // Refresh credit balance
-        const protocol = req.protocol;
-        const host = req.get('host');
-        const baseUrl = `${protocol}://${host}`;
-        await axios.get(`${baseUrl}/api/credits/balance`, { 
-          headers: { 
-            Authorization: req.headers.authorization 
-          }
-        });
+        await refreshCreditBalance(req);
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
-        // Even if credit deduction fails, we still return the inpainted image
-        // but log the error for investigation
-        console.error("Credit deduction failed but inpainting was successful:", error);
+        // Don't throw here, we still want to return the result
       }
 
       res.json({ inpaintedImage });
