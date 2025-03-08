@@ -92,45 +92,7 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
-  // New endpoint for unstaging (furniture removal)
-  app.post("/api/unstage", authMiddleware, async (req: any, res) => {
-    try {
-      console.log("Unstage request received from user:", req.user.id);
-      const { image } = req.body;
-
-      if (!image) {
-        return res.status(400).json({
-          message: "Image is required",
-        });
-      }
-
-      // Remove furniture first
-      console.log("Removing furniture from image");
-      const emptyRoomUrl = await removeExistingFurniture(image);
-
-      // Only deduct credits if removal was successful
-      try {
-        await deductUserCredits(req.user.id, 'unstage');
-        console.log("Credits successfully deducted for unstaging");
-        await refreshCreditBalance(req);
-      } catch (error: any) {
-        console.error("Credit deduction failed:", error);
-        // Don't throw here, we still want to return the result
-      }
-
-      res.json({ emptyRoomUrl });
-    } catch (error: any) {
-      console.error("Unstage error:", error);
-      if (error.message === "Insufficient credits") {
-        return res.status(403).json({ message: "Insufficient credits" });
-      }
-      res.status(500).json({
-        message: error.message || "Failed to remove furniture",
-      });
-    }
-  });
-
-  // Modified generate endpoint to use direct image input
+  // Modified generate endpoint to handle both unstaging and generation
   app.post("/api/generate", authMiddleware, async (req: any, res) => {
     try {
       console.log("Generate request received from user:", req.user.id);
@@ -173,7 +135,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Protected route for inpainting
+  // Inpainting endpoint
   app.post("/api/inpaint", authMiddleware, async (req: any, res) => {
     try {
       console.log("Inpaint request received from user:", req.user.id);

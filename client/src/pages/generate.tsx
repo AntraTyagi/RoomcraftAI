@@ -50,8 +50,13 @@ export default function Generate() {
       const imageBase64 = uploadedImage.split(',')[1];
 
       try {
-        // Generate designs using the provided image
-        console.log("Generating designs with params:", { selectedStyle, selectedRoom, selectedTheme });
+        console.log("Sending generate request with params:", {
+          style: selectedStyle,
+          roomType: selectedRoom,
+          colorTheme: selectedTheme,
+          hasPrompt: Boolean(prompt)
+        });
+
         const res = await apiRequest("POST", "/api/generate", {
           image: imageBase64,
           style: selectedStyle,
