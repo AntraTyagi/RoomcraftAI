@@ -8,7 +8,6 @@ const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
 export function setupAuth(app: Express) {
   passport.serializeUser((user: any, done) => {
-    console.log("Serializing user:", user._id);
     done(null, user._id);
   });
 
