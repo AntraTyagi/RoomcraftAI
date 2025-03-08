@@ -31,25 +31,16 @@ export default function Generate() {
         throw new Error("Please login to generate designs");
       }
 
-      if (!uploadedImage || !selectedStyle || !selectedRoom || !selectedTheme) {
-        throw new Error("Please fill in all required fields");
-      }
-
       const res = await apiRequest("POST", "/api/generate", {
-        image: uploadedImage.split(',')[1],
+        image: uploadedImage?.split(',')[1],
         style: selectedStyle,
         roomType: selectedRoom,
         colorTheme: selectedTheme,
         prompt,
       });
-
-      const data = await res.json();
-      return data;
+      return res.json();
     },
     onSuccess: (data) => {
-      if (!data.designs || !Array.isArray(data.designs)) {
-        throw new Error("Invalid response format");
-      }
       setGeneratedDesigns(data.designs);
       refreshCredits();
       toast({
@@ -67,9 +58,45 @@ export default function Generate() {
     },
   });
 
-  if (!user) {
-    return null;
-  }
+  const handleGenerate = () => {
+    if (!uploadedImage) {
+      toast({
+        title: "Error",
+        description: "Please upload an image first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedStyle) {
+      toast({
+        title: "Error",
+        description: "Please select a style",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedRoom) {
+      toast({
+        title: "Error",
+        description: "Please select a room type",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedTheme) {
+      toast({
+        title: "Error",
+        description: "Please select a color theme",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    generateMutation.mutate();
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -147,8 +174,8 @@ export default function Generate() {
           className="mb-4"
         />
         <Button
-          onClick={() => generateMutation.mutate()}
-          disabled={generateMutation.isPending || !uploadedImage || !selectedStyle || !selectedRoom || !selectedTheme}
+          onClick={handleGenerate}
+          disabled={generateMutation.isPending}
           className="w-full"
         >
           {generateMutation.isPending && (

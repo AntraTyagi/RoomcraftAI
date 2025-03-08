@@ -30,7 +30,6 @@ export async function apiRequest(
     if (response.status === 401) {
       // Clear token on auth error
       localStorage.removeItem('auth_token');
-      window.location.href = '/auth';
       const error = new Error("Authentication required");
       error.name = "AuthError";
       throw error;
@@ -44,35 +43,29 @@ export async function apiRequest(
 
 export function getQueryFn(options: GetQueryFnOptions = {}) {
   return async ({ queryKey }: { queryKey: QueryKey }) => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
+    const token = localStorage.getItem('auth_token');
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const res = await fetch(queryKey[0] as string, { headers });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          localStorage.removeItem('auth_token');
-          if (options.on401 === "returnNull") {
-            return null;
-          }
-          window.location.href = '/auth';
-          throw new Error("Authentication required");
-        }
-        throw new Error(await res.text());
-      }
-
-      return res.json();
-    } catch (error) {
-      console.error('Query error:', error);
-      throw error;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
+
+    const res = await fetch(queryKey[0] as string, { headers });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        localStorage.removeItem('auth_token');
+        if (options.on401 === "returnNull") {
+          return null;
+        }
+        throw new Error("Authentication required");
+      }
+      throw new Error(await res.text());
+    }
+
+    return res.json();
   };
 }
 
