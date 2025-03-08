@@ -9,6 +9,10 @@ export async function generateDesign(
   colorTheme?: string,
   prompt?: string
 ): Promise<string[]> {
+  if (!process.env.REPLICATE_API_KEY) {
+    throw new Error("Replicate API key is missing");
+  }
+
   try {
     // Convert base64 to data URL if needed
     const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
@@ -40,14 +44,13 @@ export async function generateDesign(
           num_inference_steps: 50,
           scheduler: "K_EULER_ANCESTRAL",
           width: 1024,
-          height: 1024,
+          height: 1024
         }
       })
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Replicate API error: ${response.status} ${errorText}`);
+      throw new Error(`Replicate API error: ${response.status} ${await response.text()}`);
     }
 
     const prediction = await response.json();
@@ -61,16 +64,12 @@ export async function generateDesign(
       });
 
       if (!result.ok) {
-        const errorText = await result.text();
-        throw new Error(`Failed to get prediction result: ${errorText}`);
+        throw new Error(`Failed to get prediction result: ${await result.text()}`);
       }
 
       const data = await result.json();
 
       if (data.status === "succeeded") {
-        if (!Array.isArray(data.output)) {
-          throw new Error("Invalid output format from Replicate API");
-        }
         return data.output;
       } else if (data.status === "failed") {
         throw new Error(data.error || "Generation failed");

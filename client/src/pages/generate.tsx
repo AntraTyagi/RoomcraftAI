@@ -5,7 +5,6 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "@/components/file-upload";
 import StyleSelector from "@/components/style-selector";
-import RoomTypeSelector from "@/components/room-type-selector";
 import RoomPreferences from "@/components/room-preferences";
 import DesignGallery from "@/components/design-gallery";
 import { Input } from "@/components/ui/input";
@@ -52,8 +51,7 @@ export default function Generate() {
         throw new Error(errorText);
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     },
     onSuccess: (data) => {
       setGeneratedDesigns(data.designs);
