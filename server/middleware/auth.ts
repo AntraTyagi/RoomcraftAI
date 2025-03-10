@@ -16,17 +16,24 @@ declare global {
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
+    // Check for session authentication first
+    if (req.isAuthenticated() && req.user) {
+      console.log('User authenticated via session:', req.user);
+      return next();
+    }
 
+    // If no session, check JWT token
+    const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('No auth token found');
       return res.status(401).json({ message: 'Authentication required' });
     }
 
     const token = authHeader.split(' ')[1];
-
     try {
-      const user = jwt.verify(token, JWT_SECRET) as Express.User;
-      req.user = user;
+      const decoded = jwt.verify(token, JWT_SECRET) as Express.User;
+      req.user = decoded;
+      console.log('User authenticated via JWT:', decoded);
       next();
     } catch (jwtError) {
       console.error('Token verification failed:', jwtError);

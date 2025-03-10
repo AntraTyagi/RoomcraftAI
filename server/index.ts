@@ -1,6 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { connectDB } from "./lib/mongodb";
 
 const app = express();
 
@@ -8,7 +11,23 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 2. Request logging middleware
+// 2. Session middleware configuration
+app.use(session({
+  secret: process.env.REPL_ID || 'roomcraft-secret',
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
+    ttl: 14 * 24 * 60 * 60, // 14 days
+    autoRemove: 'native'
+  }),
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 1000 * 60 * 60 * 24 * 14 // 14 days
+  }
+}));
+
+// 3. Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -38,10 +57,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // 3. Register routes which will set up auth middleware
+  // Connect to MongoDB first
+  await connectDB();
+
+  // Register routes which will set up auth middleware
   const server = registerRoutes(app);
 
-  // 4. Error handling middleware
+  // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error("Error:", err);
     const status = err.status || err.statusCode || 500;
@@ -49,7 +71,7 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  // 5. Setup Vite or static serving
+  // Setup Vite or static serving
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {

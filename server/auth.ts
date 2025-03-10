@@ -3,29 +3,29 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import jwt from 'jsonwebtoken';
 import { User } from "./models/User";
-import { sendVerificationEmail, generateVerificationToken, verifyEmailTransporter } from './lib/email';
+import { sendVerificationEmail, generateVerificationToken } from './lib/email';
 
 const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
 export function setupAuth(app: Express) {
+  // Initialize passport and session support
   app.use(passport.initialize());
+  app.use(passport.session());
 
-  // Test route for email configuration
-  app.get("/api/test-email-config", async (req, res) => {
+  // Passport serialization
+  passport.serializeUser((user: any, done) => {
+    console.log('Serializing user:', user._id);
+    done(null, user._id);
+  });
+
+  passport.deserializeUser(async (id: string, done) => {
     try {
-      const result = await verifyEmailTransporter();
-      res.json({ 
-        status: 'success',
-        message: 'Email configuration is working',
-        details: result
-      });
-    } catch (error: any) {
-      console.error('Email configuration test failed:', error);
-      res.status(500).json({ 
-        status: 'error',
-        message: 'Email configuration test failed',
-        error: error.message
-      });
+      console.log('Deserializing user:', id);
+      const user = await User.findById(id);
+      done(null, user);
+    } catch (err) {
+      console.error('Deserialization error:', err);
+      done(err);
     }
   });
 
@@ -69,6 +69,90 @@ export function setupAuth(app: Express) {
       return done(err);
     }
   }));
+
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", { session: true }, (err, user, info) => {
+      if (err) {
+        console.error('Login error:', err);
+        return next(err);
+      }
+
+      if (!user) {
+        console.log('Login failed:', info?.message);
+        return res.status(401).json({ message: info?.message || "Invalid credentials" });
+      }
+
+      // Log the user in and create session
+      req.logIn(user, (err) => {
+        if (err) {
+          console.error('Session creation error:', err);
+          return next(err);
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+        console.log('Login successful - Token generated');
+
+        // Save session before sending response
+        req.session.save((err) => {
+          if (err) {
+            console.error('Session save error:', err);
+            return next(err);
+          }
+
+          res.json({
+            token,
+            user: {
+              id: user.id,
+              email: user.email,
+              username: user.email,
+              name: user.name,
+              credits: user.credits
+            }
+          });
+        });
+      });
+    })(req, res, next);
+  });
+
+  app.post("/api/logout", (req, res, next) => {
+    const sessionId = req.sessionID;
+    console.log('Logging out session:', sessionId);
+
+    req.logout((err) => {
+      if (err) {
+        console.error('Logout error:', err);
+        return next(err);
+      }
+
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Session destruction error:', err);
+          return next(err);
+        }
+        res.json({ message: "Logged out successfully" });
+      });
+    });
+  });
+
+  // Test route for email configuration
+  app.get("/api/test-email-config", async (req, res) => {
+    try {
+      const result = await verifyEmailTransporter();
+      res.json({ 
+        status: 'success',
+        message: 'Email configuration is working',
+        details: result
+      });
+    } catch (error: any) {
+      console.error('Email configuration test failed:', error);
+      res.status(500).json({ 
+        status: 'error',
+        message: 'Email configuration test failed',
+        error: error.message
+      });
+    }
+  });
 
   app.post("/api/register", async (req, res) => {
     try {
@@ -206,37 +290,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", { session: false }, (err, user, info) => {
-      if (err) {
-        console.error('Login error:', err);
-        return next(err);
-      }
-
-      if (!user) {
-        console.log('Login failed:', info?.message);
-        return res.status(401).json({ message: info?.message || "Invalid credentials" });
-      }
-
-      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
-      console.log('Login successful - Token generated');
-
-      res.json({
-        token: token,
-        user: {
-          id: user.id,
-          email: user.email,
-          username: user.email,
-          name: user.name,
-          credits: user.credits
-        }
-      });
-    })(req, res, next);
-  });
-
-  app.post("/api/logout", (req, res) => {
-    res.json({ message: "Logged out successfully" });
-  });
 
   // Debug middleware
   app.use((req, res, next) => {
