@@ -15,19 +15,25 @@ declare global {
 }
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Authentication required' });
-  }
-
   try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const token = authHeader.split(' ')[1];
-    const user = jwt.verify(token, JWT_SECRET) as Express.User;
-    req.user = user;
-    next();
+
+    try {
+      const user = jwt.verify(token, JWT_SECRET) as Express.User;
+      req.user = user;
+      next();
+    } catch (jwtError) {
+      console.error('Token verification failed:', jwtError);
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
   } catch (error) {
-    console.error('Token verification failed:', error);
-    return res.status(401).json({ message: 'Invalid token' });
+    console.error('Auth middleware error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };

@@ -26,7 +26,17 @@ export function ProtectedRoute({
           return <Redirect to="/auth" />;
         }
 
-        return <Component />;
+        try {
+          return <Component />;
+        } catch (error) {
+          console.error('Error rendering protected component:', error);
+          return (
+            <div className="flex flex-col items-center justify-center min-h-screen">
+              <p className="text-destructive mb-4">Something went wrong</p>
+              <Redirect to="/" />
+            </div>
+          );
+        }
       }}
     </Route>
   );

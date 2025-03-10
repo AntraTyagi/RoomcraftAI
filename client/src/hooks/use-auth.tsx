@@ -42,13 +42,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Initialize auth token from localStorage
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      // Update Authorization header for all future requests
+      queryClient.setDefaultOptions({
+        queries: {
+          retry: false,
+        },
+      });
+    }
+  }, []);
+
   const {
     data: user,
     error,
     isLoading,
   } = useQuery<User>({
     queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return null;
+
+      try {
+        const response = await apiRequest("GET", "/api/user");
+        return response.json();
+      } catch (error) {
+        localStorage.removeItem('auth_token');
+        throw error;
+      }
+    },
     retry: false,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
@@ -97,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      localStorage.removeItem('auth_token');
       toast({
         title: "Login failed",
         description: error.message,
@@ -112,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
+      queryClient.clear();
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -142,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      localStorage.removeItem('auth_token');
       toast({
         title: "Registration failed",
         description: error.message,
