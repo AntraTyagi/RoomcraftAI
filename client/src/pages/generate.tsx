@@ -7,6 +7,7 @@ import FileUpload from "@/components/file-upload";
 import StyleSelector from "@/components/style-selector";
 import RoomTypeSelector from "@/components/room-type-selector";
 import DesignGallery from "@/components/design-gallery";
+import DebugPanel from "@/components/debug-panel";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ export default function Generate() {
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [generatedDesigns, setGeneratedDesigns] = useState<string[]>([]);
+  const [unstagedRoom, setUnstagedRoom] = useState<string | null>(null);
   const { toast } = useToast();
   const { user, refreshCredits } = useAuth();
 
@@ -52,6 +54,9 @@ export default function Generate() {
     onSuccess: (data) => {
       if (!data.designs || !Array.isArray(data.designs)) {
         throw new Error("Invalid response format from server");
+      }
+      if (data.unstagedRoom) {
+        setUnstagedRoom(data.unstagedRoom);
       }
       setGeneratedDesigns(data.designs);
       refreshCredits();
@@ -196,6 +201,14 @@ export default function Generate() {
           Generate Designs
         </Button>
       </Card>
+
+      {uploadedImage && (
+        <DebugPanel
+          inputImage={uploadedImage}
+          visualizationImage={unstagedRoom}
+          prompt="Removing existing furniture to create an empty room"
+        />
+      )}
 
       {generatedDesigns.length > 0 && (
         <Card className="p-6">
