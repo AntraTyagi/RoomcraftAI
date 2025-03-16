@@ -5,7 +5,7 @@ import {
   UseMutationResult,
   useQueryClient,
 } from "@tanstack/react-query";
-import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -42,18 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Initialize auth token from localStorage
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (token) {
-      queryClient.setDefaultOptions({
-        queries: {
-          retry: false,
-        },
-      });
-    }
-  }, []);
-
+  // User query with session-based authentication
   const {
     data: user,
     error,
@@ -61,13 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<User>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      const token = localStorage.getItem("auth_token");
-      if (!token) return null;
-
       try {
-        return await apiRequest("GET", "/api/user"); // ✅ Fix applied
+        const response = await apiRequest("GET", "/api/user");
+        return response.json();
       } catch (error) {
-        localStorage.removeItem("auth_token");
+        // Only clear token if it's an auth error
+        if (error instanceof Error && error.name === "AuthError") {
+          localStorage.removeItem('auth_token');
+        }
         throw error;
       }
     },
@@ -78,16 +68,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const refreshCredits = async () => {
+    console.log("Refreshing user credits...");
     try {
       const response = await apiRequest("GET", "/api/credits/balance");
       const data = await response.json();
+      console.log("New credit balance:", data.credits);
+
       if (user) {
-        queryClient.setQueryData(["/api/user"], {
+        const updatedUser = {
           ...user,
           credits: data.credits,
-        });
+        };
+        console.log("Updating cached user data:", updatedUser);
+        queryClient.setQueryData(["/api/user"], updatedUser);
       }
     } catch (error) {
+      console.error("Failed to refresh credits:", error);
       toast({
         title: "Error",
         description: "Failed to update credit balance",
@@ -102,16 +98,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return res.json();
     },
     onSuccess: (data: LoginResponse) => {
-      localStorage.setItem("auth_token", data.token);
+      localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
       refreshCredits();
+      const firstName = data.user.name.split(' ')[0];
       toast({
         title: "Login successful",
-        description: `Welcome back, ${data.user.name.split(" ")[0]}!`,
+        description: `Welcome back, ${firstName}!`,
       });
     },
     onError: (error: Error) => {
-      localStorage.removeItem("auth_token");
+      localStorage.removeItem('auth_token');
       toast({
         title: "Login failed",
         description: error.message,
@@ -123,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/logout");
-      localStorage.removeItem("auth_token");
+      localStorage.removeItem('auth_token');
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
@@ -131,6 +128,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Logout failed",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
@@ -141,20 +145,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return res.json();
     },
     onSuccess: (data: LoginResponse) => {
-      localStorage.setItem("auth_token", data.token);
+      localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
+      const firstName = data.user.name.split(' ')[0];
       toast({
         title: "Registration successful",
-        description: `Welcome, ${data.user.name.split(" ")[0]}! Please verify your email to receive free credits.`,
+        description: `Welcome, ${firstName}! Please verify your email to receive free credits.`,
+      });
+    },
+    onError: (error: Error) => {
+      localStorage.removeItem('auth_token');
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
-
-  useEffect(() => {
-    if (user) {
-      refreshCredits();
-    }
-  }, [user?.id]);
 
   return (
     <AuthContext.Provider
