@@ -87,9 +87,9 @@ export function registerRoutes(app: Express): Server {
 
       // Generate designs first
       console.log("Generating designs with params:", { style, roomType, colorTheme });
-      const designs = await generateDesign(image, style, roomType, colorTheme, prompt);
+      const result = await generateDesign(image, style, roomType, colorTheme, prompt);
 
-      if (!designs || !designs.length) {
+      if (!result.designs || !result.designs.length) {
         throw new Error("No designs were generated");
       }
 
@@ -116,10 +116,10 @@ export function registerRoutes(app: Express): Server {
         console.error("Credit deduction failed but designs were generated:", error);
       }
 
-      console.log("Designs generated successfully:", designs.length);
+      console.log("Designs generated successfully:", result.designs.length);
       res.json({ 
-        designs,
-        unstagedRoom: designs.unstagedRoom // Include the unstaged room URL
+        designs: result.designs,
+        unstagedRoom: result.unstagedRoom
       });
     } catch (error: any) {
       console.error("Generate error:", error);

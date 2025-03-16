@@ -85,7 +85,7 @@ export async function generateDesign(
   roomType?: string,
   colorTheme?: string,
   prompt?: string
-): Promise<string[]> {
+): Promise<{ designs: string[], unstagedRoom: string }> {
   if (!process.env.REPLICATE_API_KEY) {
     throw new Error("Replicate API key is missing");
   }
@@ -180,7 +180,10 @@ export async function generateDesign(
 
     const results = await getResult(prediction.urls.get);
     console.log("Generated images:", results);
-    return results;
+    return { 
+      designs: results,
+      unstagedRoom: emptyRoomUrl 
+    };
   } catch (error) {
     console.error("Generate design error:", error);
     throw error;

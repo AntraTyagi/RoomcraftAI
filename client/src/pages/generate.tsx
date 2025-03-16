@@ -45,7 +45,8 @@ export default function Generate() {
           colorTheme: selectedTheme,
           prompt,
         });
-        return res.json();
+        const data = await res.json();
+        return data;
       } catch (error) {
         console.error("Generate API error:", error);
         throw error;
@@ -55,10 +56,8 @@ export default function Generate() {
       if (!data.designs || !Array.isArray(data.designs)) {
         throw new Error("Invalid response format from server");
       }
-      if (data.unstagedRoom) {
-        setUnstagedRoom(data.unstagedRoom);
-      }
       setGeneratedDesigns(data.designs);
+      setUnstagedRoom(data.unstagedRoom); 
       refreshCredits();
       toast({
         title: "Success",
@@ -66,6 +65,7 @@ export default function Generate() {
       });
     },
     onError: (error: Error) => {
+      console.error("Generation error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to generate designs. Please try again.",
@@ -203,11 +203,14 @@ export default function Generate() {
       </Card>
 
       {uploadedImage && (
-        <DebugPanel
-          inputImage={uploadedImage}
-          visualizationImage={unstagedRoom}
-          prompt="Removing existing furniture to create an empty room"
-        />
+        <Card className="p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4">Debug Panel</h2>
+          <DebugPanel
+            inputImage={uploadedImage}
+            visualizationImage={unstagedRoom}
+            prompt="empty room, nothing"
+          />
+        </Card>
       )}
 
       {generatedDesigns.length > 0 && (
