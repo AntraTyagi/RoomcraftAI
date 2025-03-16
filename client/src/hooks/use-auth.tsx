@@ -42,20 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Initialize auth token from localStorage
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      // Update Authorization header for all future requests
-      queryClient.setDefaultOptions({
-        queries: {
-          retry: false,
-        },
-      });
-    }
-  }, []);
-
-  // User query with automatic token validation
+  // User query with session-based authentication
   const {
     data: user,
     error,
@@ -63,14 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<User>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      const token = localStorage.getItem('auth_token');
-      if (!token) return null;
-
       try {
         const response = await apiRequest("GET", "/api/user");
         return response.json();
       } catch (error) {
-        localStorage.removeItem('auth_token');
+        // Only clear token if it's an auth error
+        if (error instanceof Error && error.name === "AuthError") {
+          localStorage.removeItem('auth_token');
+        }
         throw error;
       }
     },

@@ -23,6 +23,7 @@ export async function apiRequest(
   const response = await fetch(url, {
     method,
     headers,
+    credentials: 'include', // Added to include cookies in requests
     body: body ? JSON.stringify(body) : undefined,
   });
 

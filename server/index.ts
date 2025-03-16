@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 2. Session middleware configuration
 app.use(session({
   secret: process.env.REPL_ID || 'roomcraft-secret',
-  resave: false,
+  resave: true, // Changed to true to ensure session persistence
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/roomcraft',
