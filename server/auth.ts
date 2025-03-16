@@ -14,14 +14,27 @@ export function setupAuth(app: Express) {
 
   // Passport serialization
   passport.serializeUser((user: any, done) => {
-    console.log('Serializing user:', user._id);
-    done(null, user._id);
+    console.log('Serializing user:', user);
+    try {
+      // Handle both MongoDB _id and regular id
+      const userId = user._id ? user._id.toString() : user.id.toString();
+      console.log('Serialized user ID:', userId);
+      done(null, userId);
+    } catch (err) {
+      console.error('Serialization error:', err);
+      done(err);
+    }
   });
 
   passport.deserializeUser(async (id: string, done) => {
     try {
       console.log('Deserializing user:', id);
       const user = await User.findById(id);
+      if (!user) {
+        console.log('User not found during deserialization:', id);
+        return done(null, false);
+      }
+      console.log('Deserialized user:', user);
       done(null, user);
     } catch (err) {
       console.error('Deserialization error:', err);
@@ -54,7 +67,9 @@ export function setupAuth(app: Express) {
         return done(null, false, { message: "Please verify your email before logging in" });
       }
 
-      const userForToken = {
+      // Create a plain object for session storage
+      const userForSession = {
+        _id: user._id,
         id: user._id.toString(),
         email: user.email,
         username: user.email,
@@ -62,8 +77,8 @@ export function setupAuth(app: Express) {
         credits: user.credits
       };
 
-      console.log('Authentication successful for user:', userForToken);
-      return done(null, userForToken);
+      console.log('Authentication successful for user:', userForSession);
+      return done(null, userForSession);
     } catch (err) {
       console.error('Authentication error:', err);
       return done(err);
@@ -90,7 +105,14 @@ export function setupAuth(app: Express) {
         }
 
         // Generate JWT token
-        const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+        const token = jwt.sign({
+          id: user.id,
+          email: user.email,
+          username: user.email,
+          name: user.name,
+          credits: user.credits
+        }, JWT_SECRET, { expiresIn: '24h' });
+
         console.log('Login successful - Token generated');
 
         // Save session before sending response
