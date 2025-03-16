@@ -31,16 +31,28 @@ export default function Generate() {
         throw new Error("Please login to generate designs");
       }
 
-      const res = await apiRequest("POST", "/api/generate", {
-        image: uploadedImage?.split(',')[1],
-        style: selectedStyle,
-        roomType: selectedRoom,
-        colorTheme: selectedTheme,
-        prompt,
-      });
-      return res.json();
+      if (!uploadedImage || !selectedStyle || !selectedRoom || !selectedTheme) {
+        throw new Error("Please fill in all required fields");
+      }
+
+      try {
+        const res = await apiRequest("POST", "/api/generate", {
+          image: uploadedImage.split(',')[1],
+          style: selectedStyle,
+          roomType: selectedRoom,
+          colorTheme: selectedTheme,
+          prompt,
+        });
+        return res.json();
+      } catch (error) {
+        console.error("Generate API error:", error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
+      if (!data.designs || !Array.isArray(data.designs)) {
+        throw new Error("Invalid response format from server");
+      }
       setGeneratedDesigns(data.designs);
       refreshCredits();
       toast({
@@ -175,7 +187,7 @@ export default function Generate() {
         />
         <Button
           onClick={handleGenerate}
-          disabled={generateMutation.isPending}
+          disabled={generateMutation.isPending || !user}
           className="w-full"
         >
           {generateMutation.isPending && (
