@@ -117,7 +117,10 @@ export function registerRoutes(app: Express): Server {
       }
 
       console.log("Designs generated successfully:", designs.length);
-      res.json({ designs });
+      res.json({ 
+        designs,
+        unstagedRoom: designs.unstagedRoom // Include the unstaged room URL
+      });
     } catch (error: any) {
       console.error("Generate error:", error);
       if (error.message === "Insufficient credits") {
