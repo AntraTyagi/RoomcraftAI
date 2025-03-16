@@ -17,7 +17,7 @@ declare global {
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   try {
     // Check for session authentication first
-    if (req.isAuthenticated() && req.user) {
+    if (req.session && req.isAuthenticated() && req.user) {
       console.log('User authenticated via session:', req.user);
       return next();
     }
@@ -33,6 +33,12 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as Express.User;
       req.user = decoded;
+
+      // Re-establish session if token is valid
+      if (req.session && !req.session.passport) {
+        req.session.passport = { user: decoded.id };
+      }
+
       console.log('User authenticated via JWT:', decoded);
       next();
     } catch (jwtError) {

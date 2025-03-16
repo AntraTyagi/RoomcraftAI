@@ -5,7 +5,7 @@ import {
   UseMutationResult,
   useQueryClient,
 } from "@tanstack/react-query";
-import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -55,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // User query with automatic token validation
   const {
     data: user,
     error,
@@ -107,8 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/login", credentials);
-      const data = await res.json();
-      return data;
+      return res.json();
     },
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);
@@ -155,8 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/register", credentials);
-      const data = await res.json();
-      return data;
+      return res.json();
     },
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);
@@ -176,12 +175,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
-
-  useEffect(() => {
-    if (user) {
-      refreshCredits();
-    }
-  }, [user?.id]);
 
   return (
     <AuthContext.Provider
