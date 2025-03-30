@@ -73,6 +73,34 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Test route to verify Replicate API connectivity
+  app.get("/api/test-replicate", async (req, res) => {
+    try {
+      // Just check if the API key is available
+      if (!process.env.REPLICATE_API_KEY) {
+        return res.status(500).json({ 
+          error: "Replicate API key is missing", 
+          status: "error" 
+        });
+      }
+      
+      // Return the first few characters of the key to verify it's loaded
+      const keyPreview = process.env.REPLICATE_API_KEY.substring(0, 3) + '...' + 
+                         process.env.REPLICATE_API_KEY.substring(process.env.REPLICATE_API_KEY.length - 3);
+      
+      return res.status(200).json({ 
+        message: `Replicate API key is configured (${keyPreview})`,
+        status: "success"
+      });
+    } catch (error: any) {
+      console.error("Test Replicate API error:", error);
+      return res.status(500).json({ 
+        error: error.message || "Unknown error",
+        status: "error" 
+      });
+    }
+  });
+
   // Protected route for generation
   app.post("/api/generate", authMiddleware, async (req: any, res) => {
     try {

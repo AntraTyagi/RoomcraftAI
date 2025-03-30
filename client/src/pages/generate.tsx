@@ -71,11 +71,19 @@ export default function Generate() {
       }
     },
     onSuccess: (data) => {
+      console.log("Generation API response:", data);
+      
       if (!data.designs || !Array.isArray(data.designs)) {
+        console.error("Invalid data format received:", data);
         throw new Error("Invalid response format from server");
       }
+      
+      console.log("Setting generated designs:", data.designs);
       setGeneratedDesigns(data.designs);
+      
+      console.log("Setting unstaged room:", data.unstagedRoom);
       setUnstagedRoom(data.unstagedRoom); 
+      
       refreshCredits();
       toast({
         title: "Success",
