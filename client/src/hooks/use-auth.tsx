@@ -1,11 +1,9 @@
-import { ReactNode, createContext, useContext, useEffect } from "react";
+import { ReactNode, createContext, useContext, useEffect, useState } from "react";
 import {
-  useQuery,
   useMutation,
   UseMutationResult,
   useQueryClient,
 } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -41,55 +39,69 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   
-  // Check for token on initial load and trigger a re-fetch
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-    }
-  }, [queryClient]);
-
-  // User query with session-based authentication
-  const {
-    data: user,
-    error,
-    isLoading,
-  } = useQuery<User>({
-    queryKey: ["/api/user"],
-    queryFn: async () => {
-      try {
-        const response = await fetch("/api/user", { 
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem('auth_token') || ''}`
-          },
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem('auth_token');
-            throw new Error("Authentication required");
-          }
-          throw new Error(await response.text());
-        }
-        
-        return response.json();
-      } catch (error) {
-        // Only clear token if it's an auth error
-        if (error instanceof Error && (error.name === "AuthError" || error.message === "Authentication required")) {
-          localStorage.removeItem('auth_token');
-        }
-        throw error;
+  // Function to fetch current user
+  const fetchCurrentUser = async (): Promise<User | null> => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setIsLoading(false);
+        return null;
       }
-    },
-    retry: false,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-  });
+      
+      const response = await fetch("/api/user", { 
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('auth_token');
+          setIsLoading(false);
+          return null;
+        }
+        throw new Error(await response.text());
+      }
+      
+      const userData = await response.json();
+      return userData;
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      if (error instanceof Error) {
+        setError(error);
+      }
+      localStorage.removeItem('auth_token');
+      setIsLoading(false);
+      return null;
+    }
+  };
+  
+  // Load user on initial render
+  useEffect(() => {
+    const loadUser = async () => {
+      setIsLoading(true);
+      try {
+        const userData = await fetchCurrentUser();
+        setUser(userData);
+      } catch (error) {
+        console.error("Failed to load user:", error);
+        if (error instanceof Error) {
+          setError(error);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadUser();
+  }, []);
 
   const refreshCredits = async () => {
     console.log("Refreshing user credits...");
@@ -115,8 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...user,
           credits: data.credits,
         };
-        console.log("Updating cached user data:", updatedUser);
-        queryClient.setQueryData(["/api/user"], updatedUser);
+        setUser(updatedUser);
       }
     } catch (error) {
       console.error("Failed to refresh credits:", error);
@@ -147,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);
-      queryClient.setQueryData(["/api/user"], data.user);
+      setUser(data.user);
       refreshCredits();
       const firstName = data.user.name.split(' ')[0];
       toast({
@@ -157,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onError: (error: Error) => {
       localStorage.removeItem('auth_token');
+      setUser(null);
       toast({
         title: "Login failed",
         description: error.message,
@@ -183,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('auth_token');
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/user"], null);
+      setUser(null);
       queryClient.clear();
       toast({
         title: "Logged out",
@@ -218,7 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);
-      queryClient.setQueryData(["/api/user"], data.user);
+      setUser(data.user);
       const firstName = data.user.name.split(' ')[0];
       toast({
         title: "Registration successful",
@@ -227,6 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onError: (error: Error) => {
       localStorage.removeItem('auth_token');
+      setUser(null);
       toast({
         title: "Registration failed",
         description: error.message,
@@ -238,7 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: user || null,
+        user,
         isLoading,
         error,
         loginMutation,

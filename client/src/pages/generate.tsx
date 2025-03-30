@@ -38,11 +38,14 @@ export default function Generate() {
       }
 
       try {
+        // Get the token from localStorage
+        const token = localStorage.getItem('auth_token') || '';
+        
         const response = await fetch("/api/generate", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem('auth_token') || ''}`
+            "Authorization": `Bearer ${token}`
           },
           credentials: 'include',
           body: JSON.stringify({
@@ -50,19 +53,21 @@ export default function Generate() {
             style: selectedStyle,
             roomType: selectedRoom,
             colorTheme: selectedTheme,
-            prompt,
+            prompt: prompt || '',
           })
         });
         
         if (!response.ok) {
-          throw new Error(await response.text());
+          const errorText = await response.text();
+          console.error("API error response:", errorText);
+          throw new Error(errorText || "Failed to generate designs");
         }
         
         const data = await response.json();
         return data;
       } catch (error) {
         console.error("Generate API error:", error);
-        throw error;
+        throw error instanceof Error ? error : new Error("An unknown error occurred");
       }
     },
     onSuccess: (data) => {
