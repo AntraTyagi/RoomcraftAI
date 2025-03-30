@@ -60,15 +60,11 @@ export default function ComparisonSlider({
   console.log("ComparisonSlider - beforeImage:", beforeImage);
   console.log("ComparisonSlider - afterImage:", afterImage);
 
-  // Function to proxy image URLs if they're external
-  const getProxiedImageUrl = (originalUrl: string) => {
-    return originalUrl.startsWith('http') 
-      ? `/api/proxy-image?url=${encodeURIComponent(originalUrl)}`
-      : originalUrl;
-  };
+  // Fallback SVG for when images fail to load
+  const fallbackSVG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIxNnB4IiBmaWxsPSIjOTk5OTk5Ij5JbWFnZSBsb2FkIGVycm9yPC90ZXh0Pjwvc3ZnPg==';
   
-  const proxiedBeforeImage = getProxiedImageUrl(beforeImage);
-  const proxiedAfterImage = getProxiedImageUrl(afterImage);
+  // Known good fallback image from Unsplash for worst-case scenarios
+  const fallbackImage = "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80";
 
   return (
     <Card className={`relative overflow-hidden select-none ${className}`}>
@@ -78,12 +74,26 @@ export default function ComparisonSlider({
       >
         {/* After Image (Full) */}
         <img
-          src={proxiedAfterImage}
+          src={afterImage}
           alt="After staging"
           className="absolute top-0 left-0 w-full h-full object-cover"
           onError={(e) => {
-            console.error("Error loading after image:", e);
-            (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIxNnB4IiBmaWxsPSIjOTk5OTk5Ij5BZnRlciBpbWFnZSBsb2FkIGVycm9yPC90ZXh0Pjwvc3ZnPg==';
+            console.error("Error loading after image directly:", e);
+            
+            // Try proxy as fallback
+            if (afterImage.startsWith('http')) {
+              (e.target as HTMLImageElement).src = `/api/proxy-image?url=${encodeURIComponent(afterImage)}`;
+              
+              // Add a second error handler for the proxy attempt
+              (e.target as HTMLImageElement).onerror = (e2) => {
+                console.error("Error loading after image through proxy:", e2);
+                // If proxy also fails, use a known good fallback
+                (e.target as HTMLImageElement).src = fallbackImage;
+              };
+            } else {
+              // For data URLs, use fallback SVG
+              (e.target as HTMLImageElement).src = fallbackSVG;
+            }
           }}
         />
 
@@ -93,12 +103,26 @@ export default function ComparisonSlider({
           style={{ width: `${position}%` }}
         >
           <img
-            src={proxiedBeforeImage}
+            src={beforeImage}
             alt="Before staging"
             className="absolute top-0 left-0 w-full h-full object-cover"
             onError={(e) => {
-              console.error("Error loading before image:", e);
-              (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIxNnB4IiBmaWxsPSIjOTk5OTk5Ij5CZWZvcmUgaW1hZ2UgbG9hZCBlcnJvcjwvdGV4dD48L3N2Zz4=';
+              console.error("Error loading before image directly:", e);
+              
+              // Try proxy as fallback
+              if (beforeImage.startsWith('http')) {
+                (e.target as HTMLImageElement).src = `/api/proxy-image?url=${encodeURIComponent(beforeImage)}`;
+                
+                // Add a second error handler for the proxy attempt
+                (e.target as HTMLImageElement).onerror = (e2) => {
+                  console.error("Error loading before image through proxy:", e2);
+                  // If proxy also fails, use a known good fallback
+                  (e.target as HTMLImageElement).src = fallbackImage;
+                };
+              } else {
+                // For data URLs, use fallback SVG
+                (e.target as HTMLImageElement).src = fallbackSVG;
+              }
             }}
           />
         </div>

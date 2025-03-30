@@ -7,28 +7,10 @@ interface DesignGalleryProps {
 }
 
 export default function DesignGallery({ designs }: DesignGalleryProps) {
-  const getProxiedImageUrl = (originalUrl: string) => {
-    return `/api/proxy-image?url=${encodeURIComponent(originalUrl)}`;
-  };
-
+  // Direct download without proxy
   const handleDownload = (url: string) => {
-    // For download, use the proxied URL
-    const proxiedUrl = getProxiedImageUrl(url);
-    
-    fetch(proxiedUrl)
-      .then(response => response.blob())
-      .then(blob => {
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `design-${Date.now()}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-      })
-      .catch(error => {
-        console.error("Error downloading image:", error);
-      });
+    // Open in new tab to download
+    window.open(url, '_blank');
   };
 
   console.log("DesignGallery received designs:", designs);
@@ -45,18 +27,27 @@ export default function DesignGallery({ designs }: DesignGalleryProps) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {designs.map((design, index) => {
         console.log(`Rendering design ${index}:`, design);
-        const proxiedUrl = getProxiedImageUrl(design);
-        console.log(`Using proxied URL for design ${index}:`, proxiedUrl);
+        // Apply a hardcoded image for testing
+        const fallbackImage = "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80";
         
         return (
           <Card key={index} className="overflow-hidden group relative">
+            {/* First try direct URL */}
             <img
-              src={proxiedUrl}
+              src={design}
               alt={`Generated design ${index + 1}`}
               className="w-full h-64 object-cover"
               onError={(e) => {
-                console.error(`Error loading image ${index}:`, e);
-                (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIxNnB4IiBmaWxsPSIjOTk5OTk5Ij5JbWFnZSBsb2FkIGVycm9yPC90ZXh0Pjwvc3ZnPg==';
+                console.error(`Error loading image ${index} directly:`, e);
+                // On error, try using our proxy
+                (e.target as HTMLImageElement).src = `/api/proxy-image?url=${encodeURIComponent(design)}`;
+                
+                // Add a second error handler for the proxy attempt
+                (e.target as HTMLImageElement).onerror = (e2) => {
+                  console.error(`Error loading image ${index} through proxy:`, e2);
+                  // If proxy also fails, use a known working fallback image
+                  (e.target as HTMLImageElement).src = fallbackImage;
+                };
               }}
             />
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

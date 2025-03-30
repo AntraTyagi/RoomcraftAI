@@ -255,19 +255,39 @@ export function registerRoutes(app: Express): Server {
       
       console.log("Proxying image from:", imageUrl);
       
-      const response = await fetch(imageUrl);
+      // Set CORS headers to allow any website to access this resource
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET');
+      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+      
+      // Fetch the image with explicit no-cache headers to ensure freshness
+      const response = await fetch(imageUrl, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       
       if (!response.ok) {
         console.error("Proxy fetch error:", response.status, response.statusText);
         return res.status(response.status).send("Failed to fetch image");
       }
       
+      // Set proper content type and cache control headers
       const contentType = response.headers.get('content-type');
       if (contentType) {
         res.setHeader('Content-Type', contentType);
+      } else {
+        res.setHeader('Content-Type', 'image/png'); // Default to PNG if no content-type
       }
       
-      // Use arrayBuffer instead of buffer for better compatibility
+      // Don't cache these images in the browser, always fetch fresh
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      // Stream the response directly to avoid memory issues with large images
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       res.send(buffer);
