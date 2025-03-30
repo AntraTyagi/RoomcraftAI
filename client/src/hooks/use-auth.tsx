@@ -41,6 +41,14 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Check for token on initial load and trigger a re-fetch
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    }
+  }, [queryClient]);
 
   // User query with session-based authentication
   const {

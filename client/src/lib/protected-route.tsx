@@ -11,33 +11,23 @@ export function ProtectedRoute({
 }) {
   const { user, isLoading } = useAuth();
 
-  return (
-    <Route path={path}>
-      {() => {
-        if (isLoading) {
-          return (
-            <div className="flex items-center justify-center min-h-screen">
-              <Loader2 className="h-8 w-8 animate-spin text-border" />
-            </div>
-          );
-        }
+  // Define a wrapper component to handle conditional rendering
+  const ProtectedComponent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-border" />
+        </div>
+      );
+    }
 
-        if (!user) {
-          return <Redirect to="/auth" />;
-        }
+    if (!user) {
+      return <Redirect to="/auth" />;
+    }
 
-        try {
-          return <Component />;
-        } catch (error) {
-          console.error('Error rendering protected component:', error);
-          return (
-            <div className="flex flex-col items-center justify-center min-h-screen">
-              <p className="text-destructive mb-4">Something went wrong</p>
-              <Redirect to="/" />
-            </div>
-          );
-        }
-      }}
-    </Route>
-  );
+    // Use ErrorBoundary pattern instead of try/catch
+    return <Component />;
+  };
+
+  return <Route path={path} component={ProtectedComponent} />;
 }
