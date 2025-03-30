@@ -53,7 +53,10 @@ export function getQueryFn(options: GetQueryFnOptions = {}) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch(queryKey[0] as string, { headers });
+    const res = await fetch(queryKey[0] as string, { 
+      headers,
+      credentials: 'include', // Include cookies for session authentication
+    });
 
     if (!res.ok) {
       if (res.status === 401) {
