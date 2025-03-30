@@ -38,14 +38,27 @@ export default function Generate() {
       }
 
       try {
-        const res = await apiRequest("POST", "/api/generate", {
-          image: uploadedImage.split(',')[1],
-          style: selectedStyle,
-          roomType: selectedRoom,
-          colorTheme: selectedTheme,
-          prompt,
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem('auth_token') || ''}`
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            image: uploadedImage.split(',')[1],
+            style: selectedStyle,
+            roomType: selectedRoom,
+            colorTheme: selectedTheme,
+            prompt,
+          })
         });
-        const data = await res.json();
+        
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+        
+        const data = await response.json();
         return data;
       } catch (error) {
         console.error("Generate API error:", error);

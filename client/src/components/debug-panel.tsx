@@ -5,10 +5,10 @@ import { Eye, EyeOff } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DebugPanelProps {
-  inputImage?: string;
-  maskImage?: string;
-  visualizationImage?: string;
-  prompt?: string;
+  inputImage?: string | null;
+  maskImage?: string | null;
+  visualizationImage?: string | null;
+  prompt?: string | null;
 }
 
 export default function DebugPanel({

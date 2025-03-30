@@ -124,6 +124,7 @@ export default function VirtualStaging() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem('auth_token') || ''}`
         },
+        credentials: 'include',
         body: JSON.stringify({
           image: uploadedImage.split(',')[1],
           mask: maskVisualization,

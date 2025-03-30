@@ -51,11 +51,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: async () => {
       try {
-        const response = await apiRequest("GET", "/api/user");
+        const response = await fetch("/api/user", { 
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem('auth_token') || ''}`
+          },
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem('auth_token');
+            throw new Error("Authentication required");
+          }
+          throw new Error(await response.text());
+        }
+        
         return response.json();
       } catch (error) {
         // Only clear token if it's an auth error
-        if (error instanceof Error && error.name === "AuthError") {
+        if (error instanceof Error && (error.name === "AuthError" || error.message === "Authentication required")) {
           localStorage.removeItem('auth_token');
         }
         throw error;
@@ -70,7 +86,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshCredits = async () => {
     console.log("Refreshing user credits...");
     try {
-      const response = await apiRequest("GET", "/api/credits/balance");
+      const response = await fetch("/api/credits/balance", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('auth_token') || ''}`
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      
       const data = await response.json();
       console.log("New credit balance:", data.credits);
 
@@ -94,8 +122,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      return res.json();
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: 'include',
+        body: JSON.stringify(credentials)
+      });
+      
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      
+      return response.json();
     },
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);
@@ -119,7 +159,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
+      const response = await fetch("/api/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('auth_token') || ''}`
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      
       localStorage.removeItem('auth_token');
     },
     onSuccess: () => {
@@ -141,8 +193,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
-      return res.json();
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: 'include',
+        body: JSON.stringify(credentials)
+      });
+      
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      
+      return response.json();
     },
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem('auth_token', data.token);

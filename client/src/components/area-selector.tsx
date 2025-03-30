@@ -15,14 +15,22 @@ export interface Area {
 interface AreaSelectorProps {
   image: string;
   onAreaSelect: (areas: Area[]) => void;
+  selectedAreas?: Area[];
 }
 
-export default function AreaSelector({ image, onAreaSelect }: AreaSelectorProps) {
-  const [areas, setAreas] = useState<Area[]>([]);
+export default function AreaSelector({ image, onAreaSelect, selectedAreas = [] }: AreaSelectorProps) {
+  const [areas, setAreas] = useState<Area[]>(selectedAreas);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Update areas when selectedAreas changes
+  useEffect(() => {
+    if (selectedAreas.length > 0) {
+      setAreas(selectedAreas);
+    }
+  }, [selectedAreas]);
 
   useEffect(() => {
     const img = new Image();
