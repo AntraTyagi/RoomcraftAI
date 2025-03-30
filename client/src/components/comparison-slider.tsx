@@ -60,6 +60,16 @@ export default function ComparisonSlider({
   console.log("ComparisonSlider - beforeImage:", beforeImage);
   console.log("ComparisonSlider - afterImage:", afterImage);
 
+  // Function to proxy image URLs if they're external
+  const getProxiedImageUrl = (originalUrl: string) => {
+    return originalUrl.startsWith('http') 
+      ? `/api/proxy-image?url=${encodeURIComponent(originalUrl)}`
+      : originalUrl;
+  };
+  
+  const proxiedBeforeImage = getProxiedImageUrl(beforeImage);
+  const proxiedAfterImage = getProxiedImageUrl(afterImage);
+
   return (
     <Card className={`relative overflow-hidden select-none ${className}`}>
       <div
@@ -68,7 +78,7 @@ export default function ComparisonSlider({
       >
         {/* After Image (Full) */}
         <img
-          src={afterImage}
+          src={proxiedAfterImage}
           alt="After staging"
           className="absolute top-0 left-0 w-full h-full object-cover"
           onError={(e) => {
@@ -83,7 +93,7 @@ export default function ComparisonSlider({
           style={{ width: `${position}%` }}
         >
           <img
-            src={beforeImage}
+            src={proxiedBeforeImage}
             alt="Before staging"
             className="absolute top-0 left-0 w-full h-full object-cover"
             onError={(e) => {

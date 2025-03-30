@@ -68,9 +68,15 @@ export default function DebugPanel({
               <div>
                 <p className="text-sm font-medium mb-2">Visualization</p>
                 <img
-                  src={visualizationImage}
+                  src={visualizationImage.startsWith('http') 
+                    ? `/api/proxy-image?url=${encodeURIComponent(visualizationImage)}`
+                    : visualizationImage}
                   alt="Visualization"
                   className="w-full rounded-lg border"
+                  onError={(e) => {
+                    console.error("Error loading visualization image:", e);
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIxNnB4IiBmaWxsPSIjOTk5OTk5Ij5JbWFnZSBsb2FkIGVycm9yPC90ZXh0Pjwvc3ZnPg==';
+                  }}
                 />
               </div>
             )}

@@ -244,6 +244,40 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Proxy endpoint for Replicate images to solve CORS issues
+  app.get("/api/proxy-image", async (req, res) => {
+    try {
+      const imageUrl = req.query.url as string;
+      
+      if (!imageUrl) {
+        return res.status(400).json({ message: "Image URL is required" });
+      }
+      
+      console.log("Proxying image from:", imageUrl);
+      
+      const response = await fetch(imageUrl);
+      
+      if (!response.ok) {
+        console.error("Proxy fetch error:", response.status, response.statusText);
+        return res.status(response.status).send("Failed to fetch image");
+      }
+      
+      const contentType = response.headers.get('content-type');
+      if (contentType) {
+        res.setHeader('Content-Type', contentType);
+      }
+      
+      // Use arrayBuffer instead of buffer for better compatibility
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      res.send(buffer);
+      
+    } catch (error) {
+      console.error("Image proxy error:", error);
+      res.status(500).send("Error fetching image");
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

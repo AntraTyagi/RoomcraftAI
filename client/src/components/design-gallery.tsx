@@ -7,13 +7,28 @@ interface DesignGalleryProps {
 }
 
 export default function DesignGallery({ designs }: DesignGalleryProps) {
+  const getProxiedImageUrl = (originalUrl: string) => {
+    return `/api/proxy-image?url=${encodeURIComponent(originalUrl)}`;
+  };
+
   const handleDownload = (url: string) => {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `design-${Date.now()}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // For download, use the proxied URL
+    const proxiedUrl = getProxiedImageUrl(url);
+    
+    fetch(proxiedUrl)
+      .then(response => response.blob())
+      .then(blob => {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `design-${Date.now()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      })
+      .catch(error => {
+        console.error("Error downloading image:", error);
+      });
   };
 
   console.log("DesignGallery received designs:", designs);
@@ -30,10 +45,13 @@ export default function DesignGallery({ designs }: DesignGalleryProps) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {designs.map((design, index) => {
         console.log(`Rendering design ${index}:`, design);
+        const proxiedUrl = getProxiedImageUrl(design);
+        console.log(`Using proxied URL for design ${index}:`, proxiedUrl);
+        
         return (
           <Card key={index} className="overflow-hidden group relative">
             <img
-              src={design}
+              src={proxiedUrl}
               alt={`Generated design ${index + 1}`}
               className="w-full h-64 object-cover"
               onError={(e) => {
