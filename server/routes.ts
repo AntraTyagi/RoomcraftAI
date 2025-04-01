@@ -261,6 +261,7 @@ export function registerRoutes(app: Express): Server {
       res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
       
       // Fetch the image with explicit no-cache headers to ensure freshness
+      console.log("Sending request to:", imageUrl);
       const response = await fetch(imageUrl, {
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -268,6 +269,15 @@ export function registerRoutes(app: Express): Server {
           'Expires': '0'
         }
       });
+      
+      console.log("Proxy response status:", response.status);
+      
+      // Log headers in a simpler way to avoid iterator issues
+      const headers: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+      console.log("Proxy response headers:", headers);
       
       if (!response.ok) {
         console.error("Proxy fetch error:", response.status, response.statusText);
@@ -278,8 +288,10 @@ export function registerRoutes(app: Express): Server {
       const contentType = response.headers.get('content-type');
       if (contentType) {
         res.setHeader('Content-Type', contentType);
+        console.log("Set Content-Type to:", contentType);
       } else {
         res.setHeader('Content-Type', 'image/png'); // Default to PNG if no content-type
+        console.log("Set default Content-Type: image/png");
       }
       
       // Don't cache these images in the browser, always fetch fresh
@@ -290,7 +302,9 @@ export function registerRoutes(app: Express): Server {
       // Stream the response directly to avoid memory issues with large images
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
+      console.log("Sending response with buffer size:", buffer.length);
       res.send(buffer);
+      console.log("Response sent successfully");
       
     } catch (error) {
       console.error("Image proxy error:", error);

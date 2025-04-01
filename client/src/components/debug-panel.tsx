@@ -68,25 +68,18 @@ export default function DebugPanel({
               <div>
                 <p className="text-sm font-medium mb-2">Visualization</p>
                 <img
-                  src={visualizationImage}
+                  src={visualizationImage.includes('replicate.delivery') 
+                    ? `/api/proxy-image?url=${encodeURIComponent(visualizationImage)}`
+                    : visualizationImage}
                   alt="Visualization"
                   className="w-full rounded-lg border"
                   onError={(e) => {
-                    console.error("Error loading visualization image directly:", e);
-                    // Try proxy as fallback
-                    if (visualizationImage.startsWith('http')) {
-                      (e.target as HTMLImageElement).src = `/api/proxy-image?url=${encodeURIComponent(visualizationImage)}`;
-                      
-                      // Add a second error handler for the proxy attempt
-                      (e.target as HTMLImageElement).onerror = (e2) => {
-                        console.error("Error loading visualization image through proxy:", e2);
-                        // If proxy also fails, use fallback SVG
-                        (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIxNnB4IiBmaWxsPSIjOTk5OTk5Ij5JbWFnZSBsb2FkIGVycm9yPC90ZXh0Pjwvc3ZnPg==';
-                      };
-                    } else {
-                      // For data URLs, just use fallback SVG
-                      (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIxNnB4IiBmaWxsPSIjOTk5OTk5Ij5JbWFnZSBsb2FkIGVycm9yPC90ZXh0Pjwvc3ZnPg==';
-                    }
+                    console.error("Error loading visualization image via proxy:", e);
+                    console.log("Original image URL:", visualizationImage);
+                    console.log("After encoding:", `/api/proxy-image?url=${encodeURIComponent(visualizationImage)}`);
+                    
+                    // Use fallback SVG when image doesn't load
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIxNnB4IiBmaWxsPSIjOTk5OTk5Ij5JbWFnZSBsb2FkIGVycm9yPC90ZXh0Pjwvc3ZnPg==';
                   }}
                 />
               </div>
