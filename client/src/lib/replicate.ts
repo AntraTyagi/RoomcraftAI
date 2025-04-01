@@ -1,2 +1,2 @@
-// This file has been moved to server/lib/replicate.ts
-// The API calls are now handled server-side for better security
+// Client-side replicate API calls are no longer needed
+// as they've been moved to server-side for better security and API key protection

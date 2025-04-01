@@ -180,41 +180,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add a temporary endpoint for admin operations (we'll remove this later)
-  app.post("/api/admin/add-credits", authMiddleware, async (req: any, res) => {
-    try {
-      console.log("Add credits request received. User data:", req.user);
-      if (!req.user || !req.user.id) {
-        console.error("No user data in request");
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      console.log("Adding credits for user:", req.user.id);
-      const user = await User.findByIdAndUpdate(
-        req.user.id,
-        { $inc: { credits: 10 } }, 
-        { new: true }
-      );
-      if (!user) {
-        console.log("User not found when adding credits");
-        return res.status(404).json({ message: "User not found" });
-      }
-      console.log("Updated credit balance:", user.credits);
-
-      // Create credit history entry
-      await CreditHistory.create({
-        userId: req.user.id,
-        operationType: 'generate', 
-        description: 'Admin credit addition',
-        creditsUsed: -10 
-      });
-
-      res.json({ credits: user.credits });
-    } catch (error) {
-      console.error("Error adding credits:", error);
-      res.status(500).json({ message: "Error adding credits" });
-    }
-  });
+  // Admin endpoints would go here if needed in the future
 
   const httpServer = createServer(app);
   return httpServer;
