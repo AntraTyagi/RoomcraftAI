@@ -38,14 +38,11 @@ export default function Generate() {
       }
 
       try {
-        // Get the token from localStorage
-        const token = localStorage.getItem('auth_token') || '';
-        
         const response = await fetch("/api/generate", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            "Authorization": `Bearer ${localStorage.getItem('auth_token') || ''}`
           },
           credentials: 'include',
           body: JSON.stringify({
@@ -53,31 +50,26 @@ export default function Generate() {
             style: selectedStyle,
             roomType: selectedRoom,
             colorTheme: selectedTheme,
-            prompt: prompt || '',
+            prompt,
           })
         });
         
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error("API error response:", errorText);
-          throw new Error(errorText || "Failed to generate designs");
+          throw new Error(await response.text());
         }
         
         const data = await response.json();
         return data;
       } catch (error) {
         console.error("Generate API error:", error);
-        throw error instanceof Error ? error : new Error("An unknown error occurred");
+        throw error;
       }
     },
     onSuccess: (data) => {
-      console.log("Generation API response:", data);
       if (!data.designs || !Array.isArray(data.designs)) {
         throw new Error("Invalid response format from server");
       }
-      console.log("Setting generated designs:", data.designs);
       setGeneratedDesigns(data.designs);
-      console.log("Setting unstaged room:", data.unstagedRoom);
       setUnstagedRoom(data.unstagedRoom); 
       refreshCredits();
       toast({

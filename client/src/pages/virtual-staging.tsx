@@ -118,36 +118,27 @@ export default function VirtualStaging() {
         throw new Error("Missing required data for staging");
       }
 
-      try {
-        // Get the token from localStorage
-        const token = localStorage.getItem('auth_token') || '';
-        
-        const response = await fetch("/api/inpaint", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            image: uploadedImage.split(',')[1],
-            mask: maskVisualization || '',
-            prompt: currentPrompt || '',
-          }),
-        });
+      const response = await fetch("/api/inpaint", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('auth_token') || ''}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          image: uploadedImage.split(',')[1],
+          mask: maskVisualization,
+          prompt: currentPrompt,
+        }),
+      });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("API error response:", errorText);
-          throw new Error(errorText || "Failed to stage image");
-        }
-
-        const data = await response.json();
-        return data;
-      } catch (error) {
-        console.error("Staging API error:", error);
-        throw error instanceof Error ? error : new Error("An unknown error occurred");
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
       }
+
+      const data = await response.json();
+      return data;
     },
     onSuccess: (data) => {
       setStagedImage(data.inpaintedImage);
