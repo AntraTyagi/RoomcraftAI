@@ -27,27 +27,25 @@ export default function DesignGallery({ designs }: DesignGalleryProps) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {designs.map((design, index) => {
         console.log(`Rendering design ${index}:`, design);
-        // Apply a hardcoded image for testing
-        const fallbackImage = "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80";
+        
+        // Use proxy URL by default for Replicate images
+        const imageUrl = design.includes('replicate.delivery') 
+          ? `/api/proxy-image?url=${encodeURIComponent(design)}`
+          : design;
         
         return (
           <Card key={index} className="overflow-hidden group relative">
-            {/* First try direct URL */}
             <img
-              src={design}
+              src={imageUrl}
               alt={`Generated design ${index + 1}`}
               className="w-full h-64 object-cover"
               onError={(e) => {
-                console.error(`Error loading image ${index} directly:`, e);
-                // On error, try using our proxy
-                (e.target as HTMLImageElement).src = `/api/proxy-image?url=${encodeURIComponent(design)}`;
-                
-                // Add a second error handler for the proxy attempt
-                (e.target as HTMLImageElement).onerror = (e2) => {
-                  console.error(`Error loading image ${index} through proxy:`, e2);
-                  // If proxy also fails, use a known working fallback image
-                  (e.target as HTMLImageElement).src = fallbackImage;
-                };
+                console.error(`Error loading image ${index} via proxy:`, e);
+                // If proxy fails, try the direct URL as fallback
+                if (design.includes('replicate.delivery')) {
+                  console.log(`Trying direct URL for image ${index}`);
+                  (e.target as HTMLImageElement).src = design;
+                }
               }}
             />
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
