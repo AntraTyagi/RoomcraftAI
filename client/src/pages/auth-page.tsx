@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
-import { useLocation } from "wouter";
 import {
   Form,
   FormControl,
@@ -37,15 +36,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { loginMutation, registerMutation, user } = useAuth();
-  const [, setLocation] = useLocation();
-
-  // If user is already logged in, redirect to home page
-  useEffect(() => {
-    if (user) {
-      setLocation("/");
-    }
-  }, [user, setLocation]);
+  const { loginMutation, registerMutation } = useAuth();
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -70,12 +61,6 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         await loginMutation.mutateAsync(formData as LoginFormData);
-        // Redirect to home page on successful login
-        setLocation("/");
-        toast({
-          title: "Success",
-          description: "Logged in successfully!",
-        });
       } else {
         // Transform the form data to match the backend expectations
         const registerData = {
@@ -84,17 +69,11 @@ export default function AuthPage() {
           name: `${(formData as RegisterFormData).firstName} ${(formData as RegisterFormData).lastName}`,
         };
         await registerMutation.mutateAsync(registerData);
-        // Redirect to home page on successful registration
-        setLocation("/");
-        toast({
-          title: "Success",
-          description: "Registered successfully!",
-        });
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Authentication failed. Please try again.",
+        description: error.message,
         variant: "destructive",
       });
     } finally {

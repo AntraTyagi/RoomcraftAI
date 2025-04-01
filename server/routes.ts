@@ -73,34 +73,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Test route to verify Replicate API connectivity
-  app.get("/api/test-replicate", async (req, res) => {
-    try {
-      // Just check if the API key is available
-      if (!process.env.REPLICATE_API_KEY) {
-        return res.status(500).json({ 
-          error: "Replicate API key is missing", 
-          status: "error" 
-        });
-      }
-      
-      // Return the first few characters of the key to verify it's loaded
-      const keyPreview = process.env.REPLICATE_API_KEY.substring(0, 3) + '...' + 
-                         process.env.REPLICATE_API_KEY.substring(process.env.REPLICATE_API_KEY.length - 3);
-      
-      return res.status(200).json({ 
-        message: `Replicate API key is configured (${keyPreview})`,
-        status: "success"
-      });
-    } catch (error: any) {
-      console.error("Test Replicate API error:", error);
-      return res.status(500).json({ 
-        error: error.message || "Unknown error",
-        status: "error" 
-      });
-    }
-  });
-
   // Protected route for generation
   app.post("/api/generate", authMiddleware, async (req: any, res) => {
     try {
@@ -241,74 +213,6 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error adding credits:", error);
       res.status(500).json({ message: "Error adding credits" });
-    }
-  });
-
-  // Proxy endpoint for Replicate images to solve CORS issues
-  app.get("/api/proxy-image", async (req, res) => {
-    try {
-      const imageUrl = req.query.url as string;
-      
-      if (!imageUrl) {
-        return res.status(400).json({ message: "Image URL is required" });
-      }
-      
-      console.log("Proxying image from:", imageUrl);
-      
-      // Set CORS headers to allow any website to access this resource
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET');
-      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
-      
-      // Fetch the image with explicit no-cache headers to ensure freshness
-      console.log("Sending request to:", imageUrl);
-      const response = await fetch(imageUrl, {
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-      
-      console.log("Proxy response status:", response.status);
-      
-      // Log headers in a simpler way to avoid iterator issues
-      const headers: Record<string, string> = {};
-      response.headers.forEach((value, key) => {
-        headers[key] = value;
-      });
-      console.log("Proxy response headers:", headers);
-      
-      if (!response.ok) {
-        console.error("Proxy fetch error:", response.status, response.statusText);
-        return res.status(response.status).send("Failed to fetch image");
-      }
-      
-      // Set proper content type and cache control headers
-      const contentType = response.headers.get('content-type');
-      if (contentType) {
-        res.setHeader('Content-Type', contentType);
-        console.log("Set Content-Type to:", contentType);
-      } else {
-        res.setHeader('Content-Type', 'image/png'); // Default to PNG if no content-type
-        console.log("Set default Content-Type: image/png");
-      }
-      
-      // Don't cache these images in the browser, always fetch fresh
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
-      // Stream the response directly to avoid memory issues with large images
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      console.log("Sending response with buffer size:", buffer.length);
-      res.send(buffer);
-      console.log("Response sent successfully");
-      
-    } catch (error) {
-      console.error("Image proxy error:", error);
-      res.status(500).send("Error fetching image");
     }
   });
 

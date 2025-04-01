@@ -118,52 +118,9 @@ export default function VirtualStaging() {
         throw new Error("Missing required data for staging");
       }
 
-      console.log("=== VIRTUAL STAGING PROCESS STARTED ===");
-      console.log(`Operation: ${operation}, Areas selected: ${selectedAreas.length}`);
-      if (operation === "replace") {
-        console.log(`Furniture type: ${furnitureType || 'Not specified'}`);
-        console.log(`Furniture style: ${furnitureStyle || 'Not specified'}`);
-        console.log(`Furniture color: ${furnitureColor || 'Not specified'}`);
-      }
-      
-      // Validate mask visualization and prompt
-      if (!maskVisualization) {
-        console.error("No mask visualization generated");
-        throw new Error("Failed to generate mask image");
-      }
-      
-      if (!currentPrompt) {
-        console.error("No prompt generated for the selected operation");
-        throw new Error("Failed to generate prompt for staging");
-      }
-      
-      console.log("Current prompt:", currentPrompt);
-      
       try {
         // Get the token from localStorage
         const token = localStorage.getItem('auth_token') || '';
-        console.log("Auth token available:", !!token);
-        
-        // Validate the image format before sending
-        let imageData = "";
-        if (uploadedImage.startsWith('data:image')) {
-          // Extract base64 part from data URL
-          const parts = uploadedImage.split(',');
-          if (parts.length === 2) {
-            imageData = parts[1];
-          } else {
-            console.error("Invalid image data URL format");
-            throw new Error("Invalid image format");
-          }
-        } else {
-          console.error("Image is not in expected data URL format");
-          imageData = uploadedImage; // Try to use as is
-        }
-        
-        console.log("Preparing to send request to server");
-        console.log("Image data length:", imageData.length);
-        console.log("Mask data length:", maskVisualization.length);
-        console.log("Prompt length:", currentPrompt.length);
         
         const response = await fetch("/api/inpaint", {
           method: "POST",
@@ -173,89 +130,38 @@ export default function VirtualStaging() {
           },
           credentials: 'include',
           body: JSON.stringify({
-            image: imageData,
-            mask: maskVisualization,
-            prompt: currentPrompt,
+            image: uploadedImage.split(',')[1],
+            mask: maskVisualization || '',
+            prompt: currentPrompt || '',
           }),
         });
 
-        console.log("Server response status:", response.status);
-        
         if (!response.ok) {
-          let errorMessage = "";
-          try {
-            const errorText = await response.text();
-            console.error("API error response:", errorText);
-            try {
-              // Try to parse as JSON
-              const errorJson = JSON.parse(errorText);
-              errorMessage = errorJson.message || errorText;
-            } catch (e) {
-              // Not JSON, use as is
-              errorMessage = errorText;
-            }
-          } catch (e) {
-            errorMessage = `Server returned status ${response.status}`;
-          }
-          
-          throw new Error(errorMessage || "Failed to stage image");
+          const errorText = await response.text();
+          console.error("API error response:", errorText);
+          throw new Error(errorText || "Failed to stage image");
         }
 
         const data = await response.json();
-        console.log("Server response received successfully");
         return data;
-      } catch (error: any) {
-        console.error("=== STAGING API ERROR ===");
-        console.error("Error details:", error.message || "Unknown error");
-        console.error("Error stack:", error.stack);
+      } catch (error) {
+        console.error("Staging API error:", error);
         throw error instanceof Error ? error : new Error("An unknown error occurred");
       }
     },
     onSuccess: (data) => {
-      console.log("=== STAGING COMPLETED SUCCESSFULLY ===");
-      console.log("Staging API response:", data);
-      
-      if (!data.inpaintedImage) {
-        console.error("Invalid data format received:", data);
-        toast({
-          title: "Error",
-          description: "Server returned an invalid response format. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      console.log("Setting staged image, URL starts with:", 
-        data.inpaintedImage.substring(0, 30) + "...");
       setStagedImage(data.inpaintedImage);
-      
-      // Refresh user credits
-      console.log("Refreshing user credits");
       refreshCredits();
-      
       toast({
-        title: "Success!",
-        description: `Furniture ${operation === "remove" ? "removal" : "replacement"} completed successfully! 🎉`,
+        title: "Success",
+        description: `Furniture ${operation === "remove" ? "removal" : "replacement"} completed successfully`,
       });
     },
     onError: (error: Error) => {
-      console.error("=== STAGING FAILED ===");
-      console.error("Error details:", error.message || "Unknown error");
-      
-      // Check for specific error types and provide helpful messages
-      let errorMessage = error.message || "Failed to modify the image. Please try again.";
-      
-      if (errorMessage.includes("Insufficient credits")) {
-        errorMessage = "You don't have enough credits to perform this operation. Please add more credits to continue.";
-      } else if (errorMessage.includes("API key")) {
-        errorMessage = "There was an issue with the AI service. Please try again later.";
-      } else if (errorMessage.includes("timeout") || errorMessage.includes("timed out")) {
-        errorMessage = "The operation took too long to complete. Please try with a smaller area or try again later.";
-      }
-      
+      console.error("Staging error:", error);
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error.message || "Failed to modify the image. Please try again.",
         variant: "destructive",
       });
     },
