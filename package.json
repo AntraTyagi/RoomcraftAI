@@ -41,16 +41,6 @@
     "@radix-ui/react-toggle": "^1.1.0",
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.3",
-<<<<<<< HEAD
-=======
-    "@react-native-camera-roll/camera-roll": "^7.9.0",
-    "@react-native-community/cli": "^15.1.3",
-    "@react-native-community/cli-platform-android": "^15.1.3",
-    "@react-native-community/cli-platform-ios": "^15.1.3",
-    "@react-native-picker/picker": "^2.11.0",
-    "@react-navigation/native": "^7.0.14",
-    "@react-navigation/native-stack": "^7.2.0",
->>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
     "@react-three/drei": "^9.121.3",
     "@react-three/fiber": "^8.17.12",
     "@replit/vite-plugin-shadcn-theme-json": "^0.0.4",
@@ -58,10 +48,7 @@
     "@tanstack/react-query": "^5.60.5",
     "@types/jsonwebtoken": "^9.0.8",
     "@types/nodemailer": "^6.4.17",
-<<<<<<< HEAD
     "@types/passport-jwt": "^4.0.1",
-=======
->>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
     "@types/react-dropzone": "^4.2.2",
     "axios": "^1.8.1",
     "bcryptjs": "^3.0.2",
@@ -70,13 +57,9 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "connect-mongo": "^5.1.0",
-<<<<<<< HEAD
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.7",
-=======
-    "date-fns": "^3.6.0",
->>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
     "drizzle-orm": "^0.38.2",
     "drizzle-zod": "^0.6.0",
     "embla-carousel-react": "^8.3.0",
@@ -94,10 +77,7 @@
     "nodemailer": "^6.10.0",
     "openai": "^4.83.0",
     "passport": "^0.7.0",
-<<<<<<< HEAD
     "passport-jwt": "^4.0.1",
-=======
->>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
     "passport-local": "^1.0.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
@@ -105,16 +85,6 @@
     "react-dropzone": "^14.3.5",
     "react-hook-form": "^7.53.1",
     "react-icons": "^5.4.0",
-<<<<<<< HEAD
-=======
-    "react-native": "^0.77.0",
-    "react-native-camera": "^4.2.1",
-    "react-native-gesture-handler": "^2.23.1",
-    "react-native-image-picker": "^8.0.0",
-    "react-native-reanimated": "^3.16.7",
-    "react-native-safe-area-context": "^5.2.0",
-    "react-native-web": "^0.19.13",
->>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
     "react-resizable-panels": "^2.1.4",
     "recharts": "^2.13.0",
     "replicate": "^1.0.1",
@@ -130,7 +100,6 @@
   "devDependencies": {
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/typography": "^0.5.15",
-<<<<<<< HEAD
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "4.17.21",
@@ -138,12 +107,6 @@
     "@types/jest": "^29.5.12",
     "@types/node": "20.16.11",
     "@types/passport": "^1.0.17",
-=======
-    "@types/express": "4.17.21",
-    "@types/express-session": "^1.18.0",
-    "@types/node": "20.16.11",
-    "@types/passport": "^1.0.16",
->>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
     "@types/passport-local": "^1.0.38",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
@@ -152,7 +115,6 @@
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.27.1",
     "esbuild": "^0.24.0",
-<<<<<<< HEAD
     "jest": "^29.7.0",
     "nodemon": "^3.0.3",
     "postcss": "^8.4.47",
@@ -160,11 +122,6 @@
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.3",
-=======
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.14",
-    "tsx": "^4.19.1",
->>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
     "typescript": "5.6.3",
     "vite": "^5.4.9"
   },
