@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 import { jsxDEV } from "react/jsx-dev-runtime";
 import { useAuth } from "../hooks/use-auth";
+=======
+import { useAuth } from "@/hooks/use-auth";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
 

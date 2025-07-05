@@ -1,8 +1,13 @@
+<<<<<<< HEAD
 import express, { Express, Request, Response, NextFunction } from "express";
+=======
+import type { Express } from "express";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { createServer, type Server } from "http";
 import { generateDesign } from "./lib/replicate";
 import { setupAuth } from "./auth";
 import { inpaintFurniture } from "./lib/replicate-inpainting";
+<<<<<<< HEAD
 import { User, IUser } from "./models/User";
 import { CreditHistory } from "./models/CreditHistory";
 import { isAuthenticated, AuthenticatedRequest } from "./middleware/auth";
@@ -18,6 +23,19 @@ const router = express.Router();
 
 export function registerRoutes(app: Express): Server {
   // Set up authentication
+=======
+import { User } from "./models/User";
+import { CreditHistory } from "./models/CreditHistory";
+import { authMiddleware } from "./middleware/auth";
+import { connectDB } from "./lib/mongodb";
+import axios from 'axios';
+
+export function registerRoutes(app: Express): Server {
+  // 1. Connect to MongoDB first
+  connectDB();
+
+  // 2. Set up authentication
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
   setupAuth(app);
 
   // Helper function to handle credit deduction
@@ -45,11 +63,22 @@ export function registerRoutes(app: Express): Server {
       });
       console.log(`Credit history created: ${creditHistory._id}`);
 
+<<<<<<< HEAD
       // Update user credits using a more reliable method
       console.log(`Updating user credits from ${user.credits} to ${user.credits - 1}`);
       user.credits -= 1;
       await user.save();
       console.log(`Updated user credits: ${user.credits}`);
+=======
+      // Update user credits atomically
+      console.log(`Updating user credits from ${user.credits} to ${user.credits - 1}`);
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $inc: { credits: -1 } },
+        { new: true }
+      );
+      console.log(`Updated user credits: ${updatedUser?.credits}`);
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
       return true;
     } catch (error) {
@@ -58,6 +87,7 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
+<<<<<<< HEAD
   // Add the missing /api/user endpoint
   app.get("/api/user", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -84,6 +114,12 @@ export function registerRoutes(app: Express): Server {
       const userId = authenticatedReq.user._id;
       console.log("Fetching credit balance for user:", userId.toString());
       const user = await User.findById(userId);
+=======
+  app.get("/api/credits/balance", authMiddleware, async (req: any, res) => {
+    try {
+      console.log("Fetching credit balance for user:", req.user.id);
+      const user = await User.findById(req.user.id);
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       if (!user) {
         console.log("User not found when fetching credits");
         return res.status(404).json({ message: "User not found" });
@@ -97,6 +133,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Protected route for generation
+<<<<<<< HEAD
   app.post('/api/generate', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const authenticatedReq = req as AuthenticatedRequest;
@@ -152,10 +189,67 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ 
         error: error.message || 'Failed to generate designs',
         details: error.stack
+=======
+  app.post("/api/generate", authMiddleware, async (req: any, res) => {
+    try {
+      console.log("Generate request received from user:", req.user.id);
+      const { image, style, roomType, colorTheme, prompt } = req.body;
+
+      if (!image || !style) {
+        return res.status(400).json({
+          message: "Image and style are required",
+        });
+      }
+
+      // Generate designs first
+      console.log("Generating designs with params:", { style, roomType, colorTheme });
+      const result = await generateDesign(image, style, roomType, colorTheme, prompt);
+
+      if (!result.designs || !result.designs.length) {
+        throw new Error("No designs were generated");
+      }
+
+      // Only deduct credits if generation was successful
+      try {
+        await deductUserCredits(req.user.id, 'generate');
+        console.log("Credits successfully deducted for generation");
+
+        // Refresh credit balance
+        const protocol = req.protocol;
+        const host = req.get('host');
+        const baseUrl = `${protocol}://${host}`;
+        console.log("Making request to refresh credits at:", `${baseUrl}/api/credits/balance`);
+        await axios.get(`${baseUrl}/api/credits/balance`, { 
+          headers: { 
+            Authorization: req.headers.authorization 
+          }
+        });
+
+      } catch (error: any) {
+        console.error("Credit deduction failed:", error);
+        // Even if credit deduction fails, we still return the generated designs
+        // but log the error for investigation
+        console.error("Credit deduction failed but designs were generated:", error);
+      }
+
+      console.log("Designs generated successfully:", result.designs.length);
+      res.json({ 
+        designs: result.designs,
+        unstagedRoom: result.unstagedRoom
+      });
+    } catch (error: any) {
+      console.error("Generate error:", error);
+      if (error.message === "Insufficient credits") {
+        return res.status(403).json({ message: "Insufficient credits" });
+      }
+      res.status(500).json({
+        message: error.message || "Failed to generate designs",
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       });
     }
   });
 
+<<<<<<< HEAD
   // Protected route for inpainting
   app.post("/api/inpaint", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -163,6 +257,13 @@ export function registerRoutes(app: Express): Server {
       const userId = authenticatedReq.user._id;
       console.log("Inpaint request received from user:", userId.toString());
       const { image, mask, prompt } = authenticatedReq.body;
+=======
+  // Protected route for inpainting - same logic applied here
+  app.post("/api/inpaint", authMiddleware, async (req: any, res) => {
+    try {
+      console.log("Inpaint request received from user:", req.user.id);
+      const { image, mask, prompt } = req.body;
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
       if (!image || !mask || !prompt) {
         return res.status(400).json({
@@ -175,6 +276,7 @@ export function registerRoutes(app: Express): Server {
 
       // Only deduct credits if inpainting was successful
       try {
+<<<<<<< HEAD
         await deductUserCredits(userId.toString(), 'inpaint');
         console.log("Credits successfully deducted for inpainting");
 
@@ -185,10 +287,27 @@ export function registerRoutes(app: Express): Server {
         await axios.get(`${baseUrl}/api/credits/balance`, { 
           headers: { 
             Authorization: authenticatedReq.headers.authorization 
+=======
+        await deductUserCredits(req.user.id, 'inpaint');
+        console.log("Credits successfully deducted for inpainting");
+
+        // Refresh credit balance
+        const protocol = req.protocol;
+        const host = req.get('host');
+        const baseUrl = `${protocol}://${host}`;
+        await axios.get(`${baseUrl}/api/credits/balance`, { 
+          headers: { 
+            Authorization: req.headers.authorization 
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
           }
         });
       } catch (error: any) {
         console.error("Credit deduction failed:", error);
+<<<<<<< HEAD
+=======
+        // Even if credit deduction fails, we still return the inpainted image
+        // but log the error for investigation
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
         console.error("Credit deduction failed but inpainting was successful:", error);
       }
 
@@ -204,6 +323,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+<<<<<<< HEAD
   app.post("/api/credits/use", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const authenticatedReq = req as AuthenticatedRequest;
@@ -305,3 +425,10 @@ export function registerRoutes(app: Express): Server {
 }
 
 export default router;
+=======
+  // Admin endpoints would go here if needed in the future
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff

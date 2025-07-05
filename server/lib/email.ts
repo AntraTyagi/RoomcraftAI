@@ -17,11 +17,14 @@ const transporter = nodemailer.createTransport({
   debug: true
 });
 
+<<<<<<< HEAD
 // Add the getTransporter function
 export function getTransporter() {
   return transporter;
 }
 
+=======
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 export async function verifyEmailTransporter() {
   try {
     console.log("Verifying email configuration with credentials:", {
@@ -49,8 +52,12 @@ export async function sendVerificationEmail(email: string, name: string, token: 
     throw new Error('REPLIT_DOMAINS environment variable is not set');
   }
 
+<<<<<<< HEAD
   // Use http:// for local development
   const verificationUrl = `http://${domain}/verify-email?token=${token}`;
+=======
+  const verificationUrl = `https://${domain}/verify-email?token=${token}`;
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
   console.log("Sending verification email to:", email);
   console.log("Verification URL:", verificationUrl);

@@ -1,7 +1,14 @@
+<<<<<<< HEAD
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Trash2, Replace } from "lucide-react";
 import { cn } from "../lib/utils";
+=======
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Trash2, Replace } from "lucide-react";
+import { cn } from "@/lib/utils";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 interface Option {
   value: string;

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { useAuth } from "../hooks/use-auth";
@@ -5,6 +6,15 @@ import { useMutation } from "@tanstack/react-query";
 import { Loader2, CreditCard } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
+=======
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
+import { useMutation } from "@tanstack/react-query";
+import { Loader2, CreditCard } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 export default function AccountPage() {
   const { user, refreshCredits } = useAuth();

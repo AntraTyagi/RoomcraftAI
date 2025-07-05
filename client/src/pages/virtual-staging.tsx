@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+<<<<<<< HEAD
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -9,6 +10,19 @@ import FurnitureOperation from "../components/furniture-operation";
 import ComparisonSlider from "../components/comparison-slider";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../hooks/use-auth";
+=======
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import FileUpload from "@/components/file-upload";
+import AreaSelector, { type Area } from "@/components/area-selector";
+import FurnitureOperation from "@/components/furniture-operation";
+import ComparisonSlider from "@/components/comparison-slider";
+import DebugPanel from "@/components/debug-panel";
+import { useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 // Furniture type options with images
 const FURNITURE_TYPES = [
@@ -295,6 +309,17 @@ export default function VirtualStaging() {
             </Card>
           )}
 
+<<<<<<< HEAD
+=======
+          {selectedAreas.length > 0 && operation && (
+            <DebugPanel
+              inputImage={uploadedImage}
+              maskImage={maskVisualization}
+              prompt={currentPrompt}
+            />
+          )}
+
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
           <Button
             onClick={handleGenerate}
             disabled={stagingMutation.isPending}

@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
+=======
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { Link } from "wouter";
 import { PlusCircle, Image, Palette } from "lucide-react";
 import { Sparkles } from "lucide-react";

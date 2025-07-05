@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { Card, CardContent } from "../components/ui/card";
+=======
+import { Card, CardContent } from "@/components/ui/card";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { AlertCircle } from "lucide-react";
 
 export default function NotFound() {

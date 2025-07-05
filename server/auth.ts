@@ -7,6 +7,7 @@ import { sendVerificationEmail, generateVerificationToken } from './lib/email';
 
 const JWT_SECRET = process.env.REPL_ID || 'roomcraft-secret';
 
+<<<<<<< HEAD
 // Add the missing verifyEmailTransporter function
 async function verifyEmailTransporter() {
   const transporter = require('./lib/email').getTransporter();
@@ -50,6 +51,9 @@ export function setupAuth(app: Express) {
     createTestUser();
   }
   
+=======
+export function setupAuth(app: Express) {
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
   // Initialize passport and session support
   app.use(passport.initialize());
   app.use(passport.session());
@@ -76,6 +80,7 @@ export function setupAuth(app: Express) {
         console.log('User not found during deserialization:', id);
         return done(null, false);
       }
+<<<<<<< HEAD
 
       // Create a proper user object with all required properties
       const userForSession = {
@@ -88,6 +93,10 @@ export function setupAuth(app: Express) {
 
       console.log('Deserialized user:', userForSession);
       done(null, userForSession);
+=======
+      console.log('Deserialized user:', user);
+      done(null, user);
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
     } catch (err) {
       console.error('Deserialization error:', err);
       done(err);
@@ -114,13 +123,28 @@ export function setupAuth(app: Express) {
         return done(null, false, { message: "Invalid credentials" });
       }
 
+<<<<<<< HEAD
       // Create a plain object for session storage
       const userForSession = {
+=======
+      if (!user.isEmailVerified) {
+        console.log('User not verified:', email);
+        return done(null, false, { message: "Please verify your email before logging in" });
+      }
+
+      // Create a plain object for session storage
+      const userForSession = {
+        _id: user._id,
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
         id: user._id.toString(),
         email: user.email,
         username: user.email,
         name: user.name,
+<<<<<<< HEAD
         credits: user.credits || 10
+=======
+        credits: user.credits
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       };
 
       console.log('Authentication successful for user:', userForSession);
@@ -132,8 +156,12 @@ export function setupAuth(app: Express) {
   }));
 
   app.post("/api/login", (req, res, next) => {
+<<<<<<< HEAD
     console.log('Login request received:', req.body);
     passport.authenticate("local", { session: true }, (err: any, user: any, info: any) => {
+=======
+    passport.authenticate("local", { session: true }, (err, user, info) => {
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       if (err) {
         console.error('Login error:', err);
         return next(err);
@@ -153,7 +181,11 @@ export function setupAuth(app: Express) {
 
         // Generate JWT token
         const token = jwt.sign({
+<<<<<<< HEAD
           id: user.id || (user as any)._id?.toString(),
+=======
+          id: user.id,
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
           email: user.email,
           username: user.email,
           name: user.name,
@@ -169,6 +201,7 @@ export function setupAuth(app: Express) {
             return next(err);
           }
 
+<<<<<<< HEAD
           // Set the session cookie
           res.cookie('connect.sid', req.sessionID, {
             httpOnly: true,
@@ -181,6 +214,12 @@ export function setupAuth(app: Express) {
             token,
             user: {
               id: user.id || (user as any)._id?.toString(),
+=======
+          res.json({
+            token,
+            user: {
+              id: user.id,
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
               email: user.email,
               username: user.email,
               name: user.name,
@@ -258,22 +297,37 @@ export function setupAuth(app: Express) {
         });
       }
 
+<<<<<<< HEAD
       // Create new user with email verification and credits
+=======
+      // Generate verification token
+      const { token, expires } = generateVerificationToken();
+      console.log("Generated verification token:", { token, expires });
+
+      // Create new user
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       const user = new User({
         email,
         password,
         name,
         username: email,
+<<<<<<< HEAD
         isEmailVerified: true,
         credits: 10,
         verificationToken: null,
         verificationTokenExpires: null
+=======
+        verificationToken: token,
+        verificationTokenExpires: expires,
+        isEmailVerified: false 
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       });
 
       console.log("Attempting to save new user");
       await user.save();
       console.log("User saved successfully:", user._id);
 
+<<<<<<< HEAD
       // Create response object with JWT token
       const userResponse = {
         token: jwt.sign({
@@ -293,6 +347,42 @@ export function setupAuth(app: Express) {
       };
 
       res.status(201).json(userResponse);
+=======
+      try {
+        // Send verification email
+        console.log("Attempting to send verification email");
+        await sendVerificationEmail(email, name, token);
+        console.log("Verification email sent successfully");
+
+        // Create response object
+        const userResponse = {
+          token: jwt.sign({
+            id: user._id.toString(),
+            email: user.email,
+            username: user.email,
+            name: user.name,
+            credits: user.credits
+          }, JWT_SECRET, { expiresIn: '24h' }),
+          user: {
+            id: user._id.toString(),
+            email: user.email,
+            username: user.email,
+            name: user.name,
+            credits: user.credits
+          }
+        };
+
+        res.status(201).json(userResponse);
+      } catch (emailError) {
+        // If email sending fails, delete the user and return error
+        console.error("Failed to send verification email:", emailError);
+        await User.findByIdAndDelete(user._id);
+
+        res.status(500).json({ 
+          message: "Failed to send verification email. Please try again later." 
+        });
+      }
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
     } catch (error: any) {
       console.error('Registration error:', error);
       res.status(500).json({ 

@@ -1,6 +1,7 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+<<<<<<< HEAD
 import { Toaster } from "./components/ui/toaster";
 import NotFound from "./pages/not-found";
 import Home from "./pages/home";
@@ -11,6 +12,18 @@ import Account from "./pages/account";
 import VerifyEmail from "./pages/verify-email";
 import Layout from "./components/layout";
 import { AuthProvider } from "./hooks/use-auth";
+=======
+import { Toaster } from "@/components/ui/toaster";
+import NotFound from "@/pages/not-found";
+import Home from "@/pages/home";
+import Generate from "@/pages/generate";
+import AuthPage from "@/pages/auth-page";
+import VirtualStaging from "@/pages/virtual-staging";
+import Account from "@/pages/account";
+import VerifyEmail from "@/pages/verify-email";
+import Layout from "@/components/layout";
+import { AuthProvider } from "@/hooks/use-auth";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { ProtectedRoute } from "./lib/protected-route";
 
 function Router() {

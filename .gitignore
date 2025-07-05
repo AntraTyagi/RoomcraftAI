@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Dependencies
 /node_modules
 /.pnp
@@ -51,3 +52,16 @@ yarn-error.log*
 /mobile/ios/build/
 /mobile/android/build/
 /mobile/android/app/build/
+=======
+node_modules
+dist
+.DS_Store
+server/public
+vite.config.ts.*
+*.tar.gz
+*.env
+*.log
+.env*
+*.local
+.vite/
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff

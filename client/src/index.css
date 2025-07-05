@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @layer base {
+<<<<<<< HEAD
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
@@ -65,6 +66,8 @@
     --ring: 212.7 26.8% 83.9%;
   }
 
+=======
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
   * {
     @apply border-border;
   }
@@ -72,10 +75,13 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+<<<<<<< HEAD
 }
 
 @layer base {
   body {
     @apply bg-background text-foreground;
   }
+=======
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 }

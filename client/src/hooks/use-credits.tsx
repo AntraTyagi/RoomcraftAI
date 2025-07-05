@@ -1,5 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+<<<<<<< HEAD
 import { useUser } from "../hooks/use-user";
+=======
+import { useUser } from "@/hooks/use-user";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 interface CreditHistory {
   _id: string;

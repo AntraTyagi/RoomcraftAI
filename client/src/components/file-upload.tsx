@@ -1,14 +1,21 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { UploadCloud, X } from "lucide-react";
+<<<<<<< HEAD
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { useToast } from "../hooks/use-toast";
+=======
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 interface FileUploadProps {
   onUpload: (base64: string) => void;
 }
 
+<<<<<<< HEAD
 // Function to resize image
 const resizeImage = (file: File): Promise<string> => {
   return new Promise((resolve) => {
@@ -43,12 +50,18 @@ const resizeImage = (file: File): Promise<string> => {
   });
 };
 
+=======
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 export default function FileUpload({ onUpload }: FileUploadProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const { toast } = useToast();
 
   const onDrop = useCallback(
+<<<<<<< HEAD
     async (acceptedFiles: File[]) => {
+=======
+    (acceptedFiles: File[]) => {
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       const file = acceptedFiles[0];
       if (file) {
         if (file.size > 5 * 1024 * 1024) {
@@ -60,6 +73,7 @@ export default function FileUpload({ onUpload }: FileUploadProps) {
           return;
         }
 
+<<<<<<< HEAD
         try {
           // Resize the image if it's larger than 1024px in any dimension
           const resizedImage = await resizeImage(file);
@@ -73,6 +87,15 @@ export default function FileUpload({ onUpload }: FileUploadProps) {
             variant: "destructive",
           });
         }
+=======
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          setPreview(base64);
+          onUpload(base64);
+        };
+        reader.readAsDataURL(file);
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       }
     },
     [onUpload, toast]
@@ -109,7 +132,11 @@ export default function FileUpload({ onUpload }: FileUploadProps) {
             Drag & drop an image here, or click to select
           </p>
           <p className="text-xs text-gray-500 mt-1">
+<<<<<<< HEAD
             Supports: JPG, PNG (max 5MB, will be resized if larger than 1024px)
+=======
+            Supports: JPG, PNG (max 5MB)
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
           </p>
         </div>
       ) : (

@@ -1,6 +1,11 @@
 import { Link } from "wouter";
+<<<<<<< HEAD
 import { Button } from "../components/ui/button";
 import { useAuth } from "../hooks/use-auth";
+=======
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { Loader2, Coins } from "lucide-react";
 
 export default function NavBar() {

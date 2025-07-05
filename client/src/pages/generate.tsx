@@ -1,4 +1,5 @@
 import { useState } from "react";
+<<<<<<< HEAD
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -14,6 +15,24 @@ import { apiRequest } from "../lib/queryClient";
 import { useAuth } from "../hooks/use-auth";
 import { COLOR_THEMES } from "../constants/color-themes";
 import { Badge } from "../components/ui/badge";
+=======
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import FileUpload from "@/components/file-upload";
+import StyleSelector from "@/components/style-selector";
+import RoomTypeSelector from "@/components/room-type-selector";
+import DesignGallery from "@/components/design-gallery";
+import DebugPanel from "@/components/debug-panel";
+import { Input } from "@/components/ui/input";
+import { useMutation } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
+import { COLOR_THEMES } from "@/constants/color-themes";
+import { Badge } from "@/components/ui/badge";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 export default function Generate() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -22,6 +41,10 @@ export default function Generate() {
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [generatedDesigns, setGeneratedDesigns] = useState<string[]>([]);
+<<<<<<< HEAD
+=======
+  const [unstagedRoom, setUnstagedRoom] = useState<string | null>(null);
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
   const { toast } = useToast();
   const { user, refreshCredits } = useAuth();
 
@@ -36,6 +59,7 @@ export default function Generate() {
       }
 
       try {
+<<<<<<< HEAD
         // Debug logging
         console.log("=== FRONTEND DEBUG ===");
         console.log("Sending to API:", {
@@ -47,6 +71,8 @@ export default function Generate() {
         });
         console.log("=== END FRONTEND DEBUG ===");
         
+=======
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
         const response = await fetch("/api/generate", {
           method: "POST",
           headers: {
@@ -79,6 +105,10 @@ export default function Generate() {
         throw new Error("Invalid response format from server");
       }
       setGeneratedDesigns(data.designs);
+<<<<<<< HEAD
+=======
+      setUnstagedRoom(data.unstagedRoom); 
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       refreshCredits();
       toast({
         title: "Success",
@@ -223,6 +253,20 @@ export default function Generate() {
         </Button>
       </Card>
 
+<<<<<<< HEAD
+=======
+      {uploadedImage && (
+        <Card className="p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4">Debug Panel</h2>
+          <DebugPanel
+            inputImage={uploadedImage}
+            visualizationImage={unstagedRoom}
+            prompt="empty room, nothing"
+          />
+        </Card>
+      )}
+
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       {generatedDesigns.length > 0 && (
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">Generated Designs</h2>

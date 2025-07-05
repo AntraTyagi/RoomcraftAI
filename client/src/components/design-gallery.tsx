@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+=======
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { Download } from "lucide-react";
 
 interface DesignGalleryProps {

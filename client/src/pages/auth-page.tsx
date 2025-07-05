@@ -1,10 +1,19 @@
 import { useState } from "react";
+<<<<<<< HEAD
 import { Card } from "../components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../hooks/use-auth";
+=======
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,7 +25,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+<<<<<<< HEAD
 } from "../components/ui/form";
+=======
+} from "@/components/ui/form";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 const registerSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -60,7 +73,10 @@ export default function AuthPage() {
     setIsLoading(true);
     try {
       if (isLogin) {
+<<<<<<< HEAD
         console.log('Attempting login with:', formData);
+=======
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
         await loginMutation.mutateAsync(formData as LoginFormData);
       } else {
         // Transform the form data to match the backend expectations
@@ -69,11 +85,17 @@ export default function AuthPage() {
           password: (formData as RegisterFormData).password,
           name: `${(formData as RegisterFormData).firstName} ${(formData as RegisterFormData).lastName}`,
         };
+<<<<<<< HEAD
         console.log('Attempting registration with:', registerData);
         await registerMutation.mutateAsync(registerData);
       }
     } catch (error: any) {
       console.error('Auth error:', error);
+=======
+        await registerMutation.mutateAsync(registerData);
+      }
+    } catch (error: any) {
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       toast({
         title: "Error",
         description: error.message,

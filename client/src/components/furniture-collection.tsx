@@ -1,9 +1,17 @@
 import { useState } from "react";
+<<<<<<< HEAD
 import { Card } from "../components/ui/card";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Badge } from "../components/ui/badge";
 import { FURNITURE_REPOSITORY, type FurnitureType } from "../constants/furniture-repository";
+=======
+import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { FURNITURE_REPOSITORY, type FurnitureType } from "@/constants/furniture-repository";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 interface FurnitureItem {
   id: string;

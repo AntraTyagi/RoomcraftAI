@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -26,4 +27,28 @@
   },
   "include": ["client/src"],
   "references": [{ "path": "./tsconfig.node.json" }]
+=======
+  "include": ["client/src/**/*", "db/**/*", "server/**/*"],
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
+    "noEmit": true,
+    "module": "ESNext",
+    "strict": true,
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "jsx": "preserve",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@db": ["./db/index.ts"],
+      "@db/*": ["./db/*"],
+      "@/*": ["./client/src/*"]
+    }
+  }
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 }

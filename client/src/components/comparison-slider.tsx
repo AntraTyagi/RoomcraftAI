@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+<<<<<<< HEAD
 import { Card } from "../components/ui/card";
+=======
+import { Card } from "@/components/ui/card";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 interface ComparisonSliderProps {
   beforeImage: string;

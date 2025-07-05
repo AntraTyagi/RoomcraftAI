@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 import { useCredits } from "../hooks/use-credits";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 import { ScrollArea } from "../components/ui/scroll-area";
+=======
+import { useCredits } from "@/hooks/use-credits";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { Loader2, Coins } from "lucide-react";
 import { format } from "date-fns";
 

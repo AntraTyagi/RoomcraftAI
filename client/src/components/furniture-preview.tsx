@@ -2,7 +2,11 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, PerspectiveCamera, Box } from "@react-three/drei";
+<<<<<<< HEAD
 import { Card } from "../components/ui/card";
+=======
+import { Card } from "@/components/ui/card";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 interface FurniturePreviewProps {
   furnitureModel?: string;

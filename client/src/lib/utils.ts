@@ -1,9 +1,14 @@
+<<<<<<< HEAD
 import { type ClassValue, clsx } from "clsx"
+=======
+import { clsx, type ClassValue } from "clsx"
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+<<<<<<< HEAD
 
 export function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -24,3 +29,5 @@ export function formatCurrency(amount: number): string {
     currency: "USD",
   }).format(amount)
 }
+=======
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff

@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+<<<<<<< HEAD
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+=======
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 import { Loader2 } from "lucide-react";
 
 export default function VerifyEmailPage() {

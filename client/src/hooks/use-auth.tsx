@@ -5,7 +5,11 @@ import {
   UseMutationResult,
   useQueryClient,
 } from "@tanstack/react-query";
+<<<<<<< HEAD
 import { useToast } from "./use-toast";
+=======
+import { useToast } from "@/hooks/use-toast";
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
 
 interface User {
   id: string;
@@ -131,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (!response.ok) {
+<<<<<<< HEAD
         const errorText = await response.text();
         console.error('Login error:', errorText);
         throw new Error(errorText);
@@ -142,6 +147,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data: LoginResponse) => {
       console.log('Login success:', data);
+=======
+        throw new Error(await response.text());
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data: LoginResponse) => {
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       localStorage.setItem('auth_token', data.token);
       queryClient.setQueryData(["/api/user"], data.user);
       refreshCredits();
@@ -152,7 +165,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+<<<<<<< HEAD
       console.error('Login error:', error);
+=======
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       localStorage.removeItem('auth_token');
       toast({
         title: "Login failed",
@@ -219,7 +235,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const firstName = data.user.name.split(' ')[0];
       toast({
         title: "Registration successful",
+<<<<<<< HEAD
         description: `Welcome, ${firstName}! You have received 10 free credits.`,
+=======
+        description: `Welcome, ${firstName}! Please verify your email to receive free credits.`,
+>>>>>>> 67d56753a5fe62bb581f258b91f41dbd00a3feff
       });
     },
     onError: (error: Error) => {
